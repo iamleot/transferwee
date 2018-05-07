@@ -103,30 +103,6 @@ def _prepare_email_upload(filenames: List[str], message: str,
     the email upload.
     
     Return the parsed JSON response.
-
-    A successfull response is of the following form:
-
-        {
-           "id": transfer_id,
-           "security_hash": security_hash,
-           ...,
-           "message": message,
-           ...,
-           "files": [
-              {
-                "id": file_id,
-                "name": filename,
-                ...,
-                "size": 0,
-                "chunk_size": 5242880
-              }
-            ],
-            "recipients": [
-              ...,
-              "email": recipient_email,
-              ...,
-            ]
-        }
     """
     j = {
         "filenames": filenames,
@@ -144,28 +120,6 @@ def _prepare_link_upload(filenames: List[str], message: str) -> str:
     """Given a list of filenames and a message prepare for the link upload.
     
     Return the parsed JSON response.
-
-    A successfull response is of the following form:
-
-        {
-           "id": transfer_id,
-           "security_hash": security_hash,
-           ...,
-           "message": message,
-           ...,
-           "files": [
-              {
-                "id": file_id,
-                "name": filename,
-                ...,
-                "size": 0,
-                "chunk_size": 5242880
-              }
-            ],
-            "recipients": [
-              ...
-            ]
-        }
     """
     j = {
         "filenames": filenames,
@@ -181,16 +135,6 @@ def _prepare_file_upload(transfer_id: str, file: str) -> str:
     """Given a transfer_id and file prepare it for the upload.
 
     Return the parsed JSON response.
-
-    A successfull response is of the following form:
-
-        {
-            "id": file_id,
-            "name": filename,
-            ...,
-            "size": filesize,
-            "chunk_size": 5242880
-        }
     """
     filename = os.path.basename(file)
     filesize = os.path.getsize(file)
@@ -209,16 +153,6 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
     """Given a transfer_id, file_id and file upload it.
 
     Return the parsed JSON response.
-
-    A successfull response is of the following form:
-
-        {
-            "id": file_id,
-            "name": filename,
-            ...,
-            "size": filesize,
-            "chunk_size": 5242880
-        }
     """
     f = open(file, 'rb')
 
@@ -265,31 +199,6 @@ def _finalize_upload(transfer_id: str) -> str:
     """Given a transfer_id finalize the upload.
 
     Return the parsed JSON response.
-
-    A successfull response is of the following form:
-
-        {
-            "id": transfer_id,
-            "security_hash": security_hash,
-            ...,
-            "shortened_url": shortened_url,
-            "message": message,
-            "expires_at": expires_at,
-            ...,
-            "files": [
-                {
-                    "id": file_id,
-                    "name": filename,
-                    ...,
-                    "size": filesize,
-                    "chunk_size", 5242880
-                },
-                ...,
-            ],
-            "recipients": [
-                ...,
-            ]
-        }
     """
     r = requests.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id))
 
