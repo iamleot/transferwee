@@ -28,6 +28,17 @@
 #
 
 
+"""
+Download/upload files via wetransfer.com
+
+transferwee is a script/module to download/upload files via wetransfer.com.
+
+It exposes `download' and `upload' subcommands, respectively used to download
+files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
+will be shared via emails or link.
+"""
+
+
 from typing import List
 import os.path
 import urllib.parse
@@ -55,6 +66,17 @@ def download_url(url: str) -> str:
     `https://wetransfer.com/downloads/'. If it is a short URL (i.e. `we.tl') the
     redirect is followed in order to retrieve the corresponding
     `wetransfer.com/downloads/' URL.
+
+    The following type of URLs are supported:
+     - `https://we.tl/<short_url_id>`:
+        received via link upload, via email to the sender and printed by
+        `upload` action
+     - `https://wetransfer.com/<transfer_id>/<security_hash>`:
+        directly not shared in any ways but the short URLs actually redirect to
+        them
+     - `https://wetransfer.com/<transfer_id>/<recipient_id>/<security_hash>`:
+        received via email by recipients when the files are shared via email
+        upload
 
     Return the download URL (AKA `direct_link') as a str.
     """
@@ -85,8 +107,9 @@ def download_url(url: str) -> str:
 def download(url: str) -> None:
     """Given a `we.tl/' or `wetransfer.com/downloads/' download it.
 
-    First a direct link is retrieved, the filename will be extracted to it and
-    it will be fetched and stored on the current working directory.
+    First a direct link is retrieved (via download_url()), the filename will
+    be extracted to it and it will be fetched and stored on the current
+    working directory.
     """
     dl_url = download_url(url)
     file = urllib.parse.urlparse(dl_url).path.split('/')[-1]
