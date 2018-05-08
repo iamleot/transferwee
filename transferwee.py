@@ -230,7 +230,7 @@ def upload(files: List[str], message: str = '', sender: str = None,
 
     # Check that there are no duplicates filenames (despite different dirname())
     filenames = [ os.path.basename(f) for f in files ]
-    if len(files) != len({ *filenames }):
+    if len(files) != len(set(filenames)):
         return None
 
     transfer_id = None
