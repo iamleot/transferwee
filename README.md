@@ -1,7 +1,7 @@
 # transferwee
 
 transferwee is a simple Python 3 script to download/upload files via
-wetransfer.com.
+[wetransfer.com](https://wetransfer.com/).
 
 
 ## Usage
