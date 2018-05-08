@@ -55,6 +55,18 @@ we.tl/wetransfer.com URLs.
 If the `-g` option is used it will just print the direct link
 corresponding each URLs without downloading files.
 
+The URL supported are the ones in the form:
+
+ - `https://we.tl/<short_url_id>`: 
+    received via link upload, via email to the sender and printed by
+    `upload` action
+ - `https://wetransfer.com/<transfer_id>/<security_hash>`:
+    directly not shared in any ways but the short URLs actually redirect to
+    them
+ - `https://wetransfer.com/<transfer_id>/<recipient_id>/<security_hash>`: 
+    received via email by recipients when the files are shared via email
+    upload
+
 ```
 % transferwee download -h
 usage: transferwee download [-h] [-g] url [url ...]
