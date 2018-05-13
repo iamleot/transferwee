@@ -63,8 +63,8 @@ def download_url(url: str) -> str:
     """Given a wetransfer.com download URL download return the downloadable URL.
 
     The URL should be of the form `https://we.tl/' or
-    `https://wetransfer.com/downloads/'. If it is a short URL (i.e. `we.tl') the
-    redirect is followed in order to retrieve the corresponding
+    `https://wetransfer.com/downloads/'. If it is a short URL (i.e. `we.tl')
+    the redirect is followed in order to retrieve the corresponding
     `wetransfer.com/downloads/' URL.
 
     The following type of URLs are supported:
@@ -98,7 +98,8 @@ def download_url(url: str) -> str:
     }
     if recipient_id:
         j["recipient_id"] = recipient_id
-    r = requests.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id), json=j)
+    r = requests.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
+                      json=j)
 
     j = r.json()
     return j.get('direct_link')
@@ -124,7 +125,7 @@ def _prepare_email_upload(filenames: List[str], message: str,
                           sender: str, recipients: List[str]) -> str:
     """Given a list of filenames, message a sender and recipients prepare for
     the email upload.
-    
+
     Return the parsed JSON response.
     """
     j = {
@@ -141,7 +142,7 @@ def _prepare_email_upload(filenames: List[str], message: str,
 
 def _prepare_link_upload(filenames: List[str], message: str) -> str:
     """Given a list of filenames and a message prepare for the link upload.
-    
+
     Return the parsed JSON response.
     """
     j = {
@@ -167,7 +168,8 @@ def _prepare_file_upload(transfer_id: str, file: str) -> str:
         "size": filesize
     }
 
-    r = requests.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id), json=j)
+    r = requests.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
+                      json=j)
     return r.json()
 
 
@@ -195,25 +197,24 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
         }
 
         r = requests.post(
-            WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id, file_id=file_id),
-            json=j
-        )
+            WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
+                                           file_id=file_id),
+            json=j)
         url = r.json().get('url')
         r = requests.options(url,
-             headers={
-                 'Origin': 'https://wetransfer.com',
-                 'Access-Control-Request-Method': 'PUT',
-             }
-        )
+                             headers={
+                                 'Origin': 'https://wetransfer.com',
+                                 'Access-Control-Request-Method': 'PUT',
+                             })
         r = requests.put(url, data=chunk)
 
     j = {
         'chunk_count': chunk_number
     }
     r = requests.put(
-        WETRANSFER_FINALIZE_MPP_URL.format(transfer_id=transfer_id, file_id=file_id),
-        json=j
-    )
+        WETRANSFER_FINALIZE_MPP_URL.format(transfer_id=transfer_id,
+                                           file_id=file_id),
+        json=j)
 
     return r.json()
 
@@ -235,8 +236,8 @@ def upload(files: List[str], message: str = '', sender: str = None,
     Also accepts optional parameters:
      - `message': message used as a description of the transfer
      - `sender': email address used to receive an ACK if the upload is
-                 successfull. For every download by the recipients an email will
-                 be also sent
+                 successfull. For every download by the recipients an email
+                 will be also sent
      - `recipients': list of email addresses of recipients. When the upload
                      succeed every recipients will receive an email with a link
 
@@ -251,8 +252,9 @@ def upload(files: List[str], message: str = '', sender: str = None,
         if not os.path.exists(f):
             return None
 
-    # Check that there are no duplicates filenames (despite different dirname())
-    filenames = [ os.path.basename(f) for f in files ]
+    # Check that there are no duplicates filenames
+    # (despite possible different dirname())
+    filenames = [os.path.basename(f) for f in files]
     if len(files) != len(set(filenames)):
         return None
 
@@ -283,15 +285,20 @@ if __name__ == '__main__':
 
     # download subcommand
     dp = sp.add_parser('download', help='download files')
-    dp.add_argument('-g', action='store_true', help='only print the direct link (without downloading it)')
-    dp.add_argument('url', nargs='+', type=str, metavar='url', help='URL (we.tl/... or wetransfer.com/downloads/...)')
+    dp.add_argument('-g', action='store_true',
+                    help='only print the direct link (without downloading it)')
+    dp.add_argument('url', nargs='+', type=str, metavar='url',
+                    help='URL (we.tl/... or wetransfer.com/downloads/...)')
 
     # upload subcommand
     up = sp.add_parser('upload', help='upload files')
-    up.add_argument('-m', type=str, default='', metavar='message', help='message description for the transfer')
+    up.add_argument('-m', type=str, default='', metavar='message',
+                    help='message description for the transfer')
     up.add_argument('-f', type=str, metavar='from', help='sender email')
-    up.add_argument('-t', nargs='+', type=str, metavar='to', help='recipient emails')
-    up.add_argument('files', nargs='+', type=str, metavar='file', help='files to upload')
+    up.add_argument('-t', nargs='+', type=str, metavar='to',
+                    help='recipient emails')
+    up.add_argument('files', nargs='+', type=str, metavar='file',
+                    help='files to upload')
 
     args = ap.parse_args()
 
