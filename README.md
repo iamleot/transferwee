@@ -46,6 +46,16 @@ optional arguments:
   -t to [to ...]  recipient emails
 ```
 
+The following example creates an `hello` text file with just `Hello world!` and
+then upload it with the message passed via `-m` option:
+
+```
+% echo 'Hello world!' > hello
+% md5 hello
+MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
+% transferwee upload -m 'Just a text file with the mandatory message...' hello
+https://we.tl/o8mGUXnxyZ
+```
 
 ### Download file
 
@@ -77,6 +87,18 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
   -g          only print the direct link (without downloading it)
+```
+
+The following example download the `hello` text file that was uploaded in the
+previous example for `upload` subcommand. Please note that if any file with the
+same name already exists it will be overwritten!:
+
+```
+% transferwee download https://we.tl/o8mGUXnxyZ
+% cat hello
+Hello world!
+% md5 hello
+MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
 ```
 
 ## Dependencies
