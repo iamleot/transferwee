@@ -1,4 +1,4 @@
-#!/usr/pkg/bin/python3.6
+#!/usr/pkg/bin/python3.7
 
 #
 # Copyright (c) 2018 Leonardo Taccari
