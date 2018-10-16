@@ -28,7 +28,9 @@ URL corresponding the transfer.
 
 If both `-f` option and `-t` option are passed the email upload
 will be used (in that way the sender will get an email after the
-upload and after every recipient will download the file).
+upload and after every recipient will download the file, please
+also note that because `-t` option accepts several fields a `--`
+is needed to separate it with the file arguments).
 Otherwise the link upload will be used.
 
 ```
