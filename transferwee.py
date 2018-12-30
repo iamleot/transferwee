@@ -93,7 +93,7 @@ def download_url(url: str) -> str:
         transfer_id, security_hash = params
     elif len(params) == 3:
         transfer_id, recipient_id, security_hash = params
-    else
+    else:
         return None
 
     j = {
