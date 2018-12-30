@@ -78,7 +78,8 @@ def download_url(url: str) -> str:
         received via email by recipients when the files are shared via email
         upload
 
-    Return the download URL (AKA `direct_link') as a str.
+    Return the download URL (AKA `direct_link') as a str or None if the URL
+    could not be parsed.
     """
     # Follow the redirect if we have a short URL
     if url.startswith('https://we.tl/'):
@@ -92,6 +93,8 @@ def download_url(url: str) -> str:
         transfer_id, security_hash = params
     elif len(params) == 3:
         transfer_id, recipient_id, security_hash = params
+    else
+        return None
 
     j = {
         "security_hash": security_hash,
