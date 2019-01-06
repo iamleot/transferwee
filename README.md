@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/iamleot/transferwee.svg?branch=master)](https://travis-ci.com/iamleot/transferwee)
+
 # transferwee
 
 transferwee is a simple Python 3 script to download/upload files via
