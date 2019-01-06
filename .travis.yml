@@ -1,10 +1,10 @@
 language: python
 
 python:
-	- 3.7
+ - 3.7
 
 install:
-	- pip install requests
+ - pip install requests
 
 script:
-	- cd tests && ./check.sh
+ - cd tests && ./check.sh
