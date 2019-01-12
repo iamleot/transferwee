@@ -48,6 +48,7 @@ optional arguments:
   -m message      message description for the transfer
   -f from         sender email
   -t to [to ...]  recipient emails
+  --clip          copy the upload URL to the clipboard
 ```
 
 The following example creates an `hello` text file with just `Hello world!` and
@@ -107,4 +108,6 @@ MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
 
 ## Dependencies
 
-transferwee needs [requests](http://python-requests.org/) package.
+transferwee depends on:
+- [requests](http://python-requests.org/) package;
+- [pyperclip](https://pypi.org/project/pyperclip/) package.

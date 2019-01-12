@@ -45,6 +45,7 @@ import urllib.parse
 import zlib
 
 import requests
+import pyperclip
 
 
 WETRANSFER_API_URL = 'https://wetransfer.com/api/v4/transfers'
@@ -302,6 +303,8 @@ if __name__ == '__main__':
                     help='recipient emails')
     up.add_argument('files', nargs='+', type=str, metavar='file',
                     help='files to upload')
+    up.add_argument('--clip', default=False, action='store_true',
+                    help='copy the upload URL to the clipboard')
 
     args = ap.parse_args()
 
@@ -315,6 +318,13 @@ if __name__ == '__main__':
         exit(0)
 
     if args.action == 'upload':
+        shortened_url = upload(args.files, args.m, args.f, args.t)
+
+        # Copy shortened URL to clipboard and exit
+        if args.clip:
+            pyperclip.copy(shortened_url)
+            exit(0)
+
         print(upload(args.files, args.m, args.f, args.t))
         exit(0)
 
