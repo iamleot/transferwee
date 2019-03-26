@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.7
 
 #
-# Copyright (c) 2018 Leonardo Taccari
+# Copyright (c) 2018-2019 Leonardo Taccari
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -124,6 +124,20 @@ def download(url: str) -> None:
             f.write(chunk)
 
 
+def _file_name_and_size(file: str) -> dict:
+    """Given a file, prepare the "name" and "size" dictionary.
+
+    Return a dictionary with "name" and "size" keys.
+    """
+    filename = os.path.basename(file)
+    filesize = os.path.getsize(file)
+
+    return {
+        "name": filename,
+        "size": filesize
+    }
+
+
 def _prepare_email_upload(filenames: List[str], message: str,
                           sender: str, recipients: List[str]) -> str:
     """Given a list of filenames, message a sender and recipients prepare for
@@ -132,7 +146,7 @@ def _prepare_email_upload(filenames: List[str], message: str,
     Return the parsed JSON response.
     """
     j = {
-        "filenames": filenames,
+        "files": [_file_name_and_size(f) for f in filenames],
         "from": sender,
         "message": message,
         "recipients": recipients,
@@ -149,7 +163,7 @@ def _prepare_link_upload(filenames: List[str], message: str) -> str:
     Return the parsed JSON response.
     """
     j = {
-        "filenames": filenames,
+        "files": [_file_name_and_size(f) for f in filenames],
         "message": message,
         "ui_language": "en",
     }
@@ -163,14 +177,7 @@ def _prepare_file_upload(transfer_id: str, file: str) -> str:
 
     Return the parsed JSON response.
     """
-    filename = os.path.basename(file)
-    filesize = os.path.getsize(file)
-
-    j = {
-        "name": filename,
-        "size": filesize
-    }
-
+    j = _file_name_and_size(file)
     r = requests.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
                       json=j)
     return r.json()
