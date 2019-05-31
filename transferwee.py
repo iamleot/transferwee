@@ -272,13 +272,13 @@ def upload(files: List[str], message: str = '', sender: str = None,
     if sender and recipients:
         # email upload
         transfer_id = \
-            _prepare_email_upload(filenames, message, sender, recipients)['id']
+            _prepare_email_upload(files, message, sender, recipients)['id']
     else:
         # link upload
-        transfer_id = _prepare_link_upload(filenames, message)['id']
+        transfer_id = _prepare_link_upload(files, message)['id']
 
     for f in files:
-        file_id = _prepare_file_upload(transfer_id, os.path.basename(f))['id']
+        file_id = _prepare_file_upload(transfer_id, f)['id']
         _upload_chunks(transfer_id, file_id, f)
 
     return _finalize_upload(transfer_id)['shortened_url']
