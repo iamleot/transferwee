@@ -26,8 +26,8 @@ echo "test file uploaded as ${url}"
 echo "Renaming original test file..."
 mv "${testtmpfile}" "${testtmpfile}.orig"
 
-echo "Waiting 5 seconds before downloading the file..."
-sleep 5
+echo "Waiting 10 seconds before downloading the file..."
+sleep 10
 
 echo "Downloading the test file via ${url}..."
 ${TRANSFERWEE} download "${url}"
