@@ -260,13 +260,13 @@ def upload(files: List[str], message: str = '', sender: str = None,
     # Check that all files exists
     for f in files:
         if not os.path.exists(f):
-            return None
+            raise FileNotFoundError(f)
 
     # Check that there are no duplicates filenames
     # (despite possible different dirname())
     filenames = [os.path.basename(f) for f in files]
     if len(files) != len(set(filenames)):
-        return None
+        raise FileExistsError('Duplicate filenames')
 
     transfer_id = None
     if sender and recipients:
