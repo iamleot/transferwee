@@ -143,9 +143,10 @@ def _file_name_and_size(file: str) -> dict:
 
 
 def _prepare_request_data() -> dict:
-    """Prepare a wetransfer.com request
+    """Prepare a wetransfer.com request.
 
-    Return cookies and headers as dict.
+    Return a dictionary with "cookies" and "headers" keys, needed for most
+    wetransfer requests.
     """
 
     r = requests.get('https://wetransfer.com/')
