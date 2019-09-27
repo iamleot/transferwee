@@ -38,7 +38,7 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-
+from sys import exit
 from typing import List
 import os.path
 import re
