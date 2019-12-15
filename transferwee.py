@@ -112,6 +112,15 @@ def download_url(url: str) -> str:
     return j.get('direct_link')
 
 
+def _file_unquote(file: str) -> str:
+    """Given a URL encoded file unquote it.
+
+    All occurences of `\', `/' and `../' will be ignored to avoid possible
+    directory traversals.
+    """
+    return urllib.parse.unquote(file).replace('../', '').replace('/', '').replace('\\', '')
+
+
 def download(url: str) -> None:
     """Given a `we.tl/' or `wetransfer.com/downloads/' download it.
 
@@ -120,7 +129,7 @@ def download(url: str) -> None:
     working directory.
     """
     dl_url = download_url(url)
-    file = urllib.parse.urlparse(dl_url).path.split('/')[-1]
+    file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
     r = requests.get(dl_url, stream=True)
     with open(file, 'wb') as f:
