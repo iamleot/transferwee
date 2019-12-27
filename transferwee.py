@@ -252,12 +252,12 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
             cookies=request_data['cookies'],
             headers=request_data['headers'])
         url = r.json().get('url')
-        r = requests.options(url,
+        requests.options(url,
                              headers={
                                  'Origin': 'https://wetransfer.com',
                                  'Access-Control-Request-Method': 'PUT',
                              })
-        r = requests.put(url, data=chunk)
+        requests.put(url, data=chunk)
 
     j = {
         'chunk_count': chunk_number
