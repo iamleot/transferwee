@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (c) 2018-2019 Leonardo Taccari
+# Copyright (c) 2018-2020 Leonardo Taccari
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,7 @@ import requests
 WETRANSFER_API_URL = 'https://wetransfer.com/api/v4/transfers'
 WETRANSFER_DOWNLOAD_URL = WETRANSFER_API_URL + '/{transfer_id}/download'
 WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + '/email'
+WETRANSFER_VERIFY_URL = WETRANSFER_API_URL + '/{transfer_id}/verify'
 WETRANSFER_UPLOAD_LINK_URL = WETRANSFER_API_URL + '/link'
 WETRANSFER_FILES_URL = WETRANSFER_API_URL + '/{transfer_id}/files'
 WETRANSFER_PART_PUT_URL = WETRANSFER_FILES_URL + '/{file_id}/part-put-url'
@@ -58,6 +59,7 @@ WETRANSFER_FINALIZE_MPP_URL = WETRANSFER_FILES_URL + '/{file_id}/finalize-mpp'
 WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
 
 WETRANSFER_DEFAULT_CHUNK_SIZE = 5242880
+WETRANSFER_EXPIRE_IN = 604800
 
 
 def download_url(url: str) -> str:
@@ -184,6 +186,25 @@ def _prepare_email_upload(filenames: List[str], message: str,
     }
 
     r = requests.post(WETRANSFER_UPLOAD_EMAIL_URL, json=j,
+                      cookies=request_data['cookies'],
+                      headers=request_data['headers'])
+    return r.json()
+
+
+def _verify_email_upload(transfer_id: str, request_data: dict) -> str:
+    """Given a transfer_id, read the code from standard input.
+
+    Return the parsed JSON response.
+    """
+    code = input('Code:')
+
+    j = {
+        "code": code,
+        "expire_in": WETRANSFER_EXPIRE_IN,
+    }
+
+    r = requests.post(WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id),
+                      json=j,
                       cookies=request_data['cookies'],
                       headers=request_data['headers'])
     return r.json()
@@ -319,6 +340,7 @@ def upload(files: List[str], message: str = '', sender: str = None,
         # email upload
         transfer_id = \
             _prepare_email_upload(files, message, sender, recipients, rd)['id']
+        _verify_email_upload(transfer_id, rd)
     else:
         # link upload
         transfer_id = _prepare_link_upload(files, message, rd)['id']
