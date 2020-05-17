@@ -84,7 +84,7 @@ The URL supported are the ones in the form:
 
 ```
 % transferwee download -h
-usage: transferwee download [-h] [-g] url [url ...]
+usage: transferwee download [-h] [-g] [-o file] url [url ...]
 
 positional arguments:
   url         URL (we.tl/... or wetransfer.com/downloads/...)
@@ -92,6 +92,7 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
   -g          only print the direct link (without downloading it)
+  -o file     output file to be used
 ```
 
 The following example download the `hello` text file that was uploaded in the
