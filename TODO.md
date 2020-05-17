@@ -4,6 +4,7 @@ and possible TODOs:
 
 ## TODO/Known bugs
 
+- Convert all `request_data` use to `requests.Session()`
 - Gracefully handle possible file overwrites in download, no checks are done and
   files are always overwritten.
 - Write a `setup.py`
