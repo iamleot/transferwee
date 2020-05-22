@@ -103,11 +103,9 @@ def download_url(url: str) -> str:
     }
     if recipient_id:
         j["recipient_id"] = recipient_id
-    request_data = _prepare_request_data()
-    r = requests.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
-                      json=j,
-                      cookies=request_data['cookies'],
-                      headers=request_data['headers'])
+    s = _prepare_session()
+    r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
+               json=j)
 
     j = r.json()
     return j.get('direct_link')
@@ -154,25 +152,24 @@ def _file_name_and_size(file: str) -> dict:
     }
 
 
-def _prepare_request_data() -> dict:
-    """Prepare a wetransfer.com request.
+def _prepare_session() -> requests.Session:
+    """Prepare a wetransfer.com session.
 
-    Return a dictionary with "cookies" and "headers" keys, needed for most
-    wetransfer requests.
+    Return a requests session that will always pass the initial X-CSRF-Token:
+    and with cookies properly populated that can be used for wetransfer
+    requests.
     """
-
-    r = requests.get('https://wetransfer.com/')
+    s = requests.Session()
+    r = s.get('https://wetransfer.com/')
     m = re.search('name="csrf-token" content="([^"]+)"', r.text)
+    s.headers.update({'X-CSRF-Token': m.group(1)})
 
-    return {
-        'headers': { 'X-CSRF-Token': m.group(1), },
-        'cookies': r.cookies,
-    }
+    return s
 
 
 def _prepare_email_upload(filenames: List[str], message: str,
                           sender: str, recipients: List[str],
-                          request_data: dict) -> str:
+                          session: requests.Session) -> str:
     """Given a list of filenames, message a sender and recipients prepare for
     the email upload.
 
@@ -186,13 +183,11 @@ def _prepare_email_upload(filenames: List[str], message: str,
         "ui_language": "en",
     }
 
-    r = requests.post(WETRANSFER_UPLOAD_EMAIL_URL, json=j,
-                      cookies=request_data['cookies'],
-                      headers=request_data['headers'])
+    r = session.post(WETRANSFER_UPLOAD_EMAIL_URL, json=j)
     return r.json()
 
 
-def _verify_email_upload(transfer_id: str, request_data: dict) -> str:
+def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
     """Given a transfer_id, read the code from standard input.
 
     Return the parsed JSON response.
@@ -204,15 +199,13 @@ def _verify_email_upload(transfer_id: str, request_data: dict) -> str:
         "expire_in": WETRANSFER_EXPIRE_IN,
     }
 
-    r = requests.post(WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id),
-                      json=j,
-                      cookies=request_data['cookies'],
-                      headers=request_data['headers'])
+    r = session.post(WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id),
+                     json=j)
     return r.json()
 
 
 def _prepare_link_upload(filenames: List[str], message: str,
-                         request_data: dict) -> str:
+                         session: requests.Session) -> str:
     """Given a list of filenames and a message prepare for the link upload.
 
     Return the parsed JSON response.
@@ -223,28 +216,24 @@ def _prepare_link_upload(filenames: List[str], message: str,
         "ui_language": "en",
     }
 
-    r = requests.post(WETRANSFER_UPLOAD_LINK_URL, json=j,
-                      cookies=request_data['cookies'],
-                      headers=request_data['headers'])
+    r = session.post(WETRANSFER_UPLOAD_LINK_URL, json=j)
     return r.json()
 
 
 def _prepare_file_upload(transfer_id: str, file: str,
-                         request_data: dict) -> str:
+                         session: requests.Session) -> str:
     """Given a transfer_id and file prepare it for the upload.
 
     Return the parsed JSON response.
     """
     j = _file_name_and_size(file)
-    r = requests.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
-                      json=j,
-                      cookies=request_data['cookies'],
-                      headers=request_data['headers'])
+    r = session.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
+                     json=j)
     return r.json()
 
 
 def _upload_chunks(transfer_id: str, file_id: str, file: str,
-                   request_data: dict,
+                   session: requests.Session,
                    default_chunk_size: int = WETRANSFER_DEFAULT_CHUNK_SIZE) -> str:
     """Given a transfer_id, file_id and file upload it.
 
@@ -267,12 +256,10 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
             "retries": 0
         }
 
-        r = requests.post(
+        r = session.post(
             WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
                                            file_id=file_id),
-            json=j,
-            cookies=request_data['cookies'],
-            headers=request_data['headers'])
+            json=j)
         url = r.json().get('url')
         requests.options(url,
                              headers={
@@ -284,24 +271,20 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
     j = {
         'chunk_count': chunk_number
     }
-    r = requests.put(
+    r = session.put(
         WETRANSFER_FINALIZE_MPP_URL.format(transfer_id=transfer_id,
                                            file_id=file_id),
-        json=j,
-        cookies=request_data['cookies'],
-        headers=request_data['headers'])
+        json=j)
 
     return r.json()
 
 
-def _finalize_upload(transfer_id: str, request_data: dict) -> str:
+def _finalize_upload(transfer_id: str, session: requests.Session) -> str:
     """Given a transfer_id finalize the upload.
 
     Return the parsed JSON response.
     """
-    r = requests.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id),
-                     cookies=request_data['cookies'],
-                     headers=request_data['headers'])
+    r = session.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id))
 
     return r.json()
 
@@ -336,21 +319,21 @@ def upload(files: List[str], message: str = '', sender: str = None,
         raise FileExistsError('Duplicate filenames')
 
     transfer_id = None
-    rd = _prepare_request_data()
+    s = _prepare_session()
     if sender and recipients:
         # email upload
         transfer_id = \
-            _prepare_email_upload(files, message, sender, recipients, rd)['id']
-        _verify_email_upload(transfer_id, rd)
+            _prepare_email_upload(files, message, sender, recipients, s)['id']
+        _verify_email_upload(transfer_id, s)
     else:
         # link upload
-        transfer_id = _prepare_link_upload(files, message, rd)['id']
+        transfer_id = _prepare_link_upload(files, message, s)['id']
 
     for f in files:
-        file_id = _prepare_file_upload(transfer_id, f, rd)['id']
-        _upload_chunks(transfer_id, file_id, f, rd)
+        file_id = _prepare_file_upload(transfer_id, f, s)['id']
+        _upload_chunks(transfer_id, file_id, f, s)
 
-    return _finalize_upload(transfer_id, rd)['shortened_url']
+    return _finalize_upload(transfer_id, s)['shortened_url']
 
 
 if __name__ == '__main__':
