@@ -38,7 +38,6 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-from sys import exit
 from typing import List
 import os.path
 import re
@@ -355,6 +354,7 @@ def upload(files: List[str], message: str = '', sender: str = None,
 
 
 if __name__ == '__main__':
+    from sys import exit
     import argparse
 
     ap = argparse.ArgumentParser(
