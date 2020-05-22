@@ -90,7 +90,7 @@ def download_url(url: str) -> str:
         url = r.url
 
     recipient_id = None
-    params = url.replace('https://wetransfer.com/downloads/', '').split('/')
+    params = urllib.parse.urlparse(url).path.split('/')[2:]
 
     if len(params) == 2:
         transfer_id, security_hash = params
