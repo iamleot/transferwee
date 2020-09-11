@@ -12,4 +12,4 @@ jobs:
       id: semgrep
       uses: returntocorp/semgrep-action@v1
       with:
-        config: r/r2c-CI
+        config: p/r2c-CI
