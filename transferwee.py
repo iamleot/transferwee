@@ -39,6 +39,7 @@ will be shared via emails or link.
 """
 
 from typing import List
+from tqdm import tqdm
 import os.path
 import re
 import urllib.parse
@@ -134,9 +135,19 @@ def download(url: str, file: str = '') -> None:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
     r = requests.get(dl_url, stream=True)
+    r.raise_for_status()
+    length = int(r.headers.get('content-length'))
     with open(file, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            f.write(chunk)
+        if r is None: # no content length header
+                f.write(r.content)
+        else:
+            dl = 0
+            progress_bar = tqdm(total=length, unit='iB', unit_scale=True)
+            for data in r.iter_content(chunk_size=1024):
+                dl += len(data)
+                f.write(data)
+                progress_bar.update(len(data))
+            progress_bar.close()
 
 
 def _file_name_and_size(file: str) -> dict:
