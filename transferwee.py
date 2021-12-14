@@ -171,7 +171,7 @@ def _prepare_session() -> requests.Session:
     return s
 
 
-def _prepare_email_upload(filenames: List[str], message: str,
+def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
                           sender: str, recipients: List[str],
                           session: requests.Session) -> str:
     """Given a list of filenames, message a sender and recipients prepare for
@@ -182,6 +182,7 @@ def _prepare_email_upload(filenames: List[str], message: str,
     j = {
         "files": [_file_name_and_size(f) for f in filenames],
         "from": sender,
+        "display_name": display_name,
         "message": message,
         "recipients": recipients,
         "ui_language": "en",
@@ -208,7 +209,7 @@ def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
     return r.json()
 
 
-def _prepare_link_upload(filenames: List[str], message: str,
+def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
                          session: requests.Session) -> str:
     """Given a list of filenames and a message prepare for the link upload.
 
@@ -216,6 +217,7 @@ def _prepare_link_upload(filenames: List[str], message: str,
     """
     j = {
         "files": [_file_name_and_size(f) for f in filenames],
+        "display_name": display_name,
         "message": message,
         "ui_language": "en",
     }
@@ -293,11 +295,12 @@ def _finalize_upload(transfer_id: str, session: requests.Session) -> str:
     return r.json()
 
 
-def upload(files: List[str], message: str = '', sender: str = None,
+def upload(files: List[str], display_name: str = '', message: str = '', sender: str = None,
            recipients: List[str] = []) -> str:
     """Given a list of files upload them and return the corresponding URL.
 
     Also accepts optional parameters:
+     - `display_name': name used as a title of the transfer
      - `message': message used as a description of the transfer
      - `sender': email address used to receive an ACK if the upload is
                  successfull. For every download by the recipients an email
@@ -327,11 +330,11 @@ def upload(files: List[str], message: str = '', sender: str = None,
     if sender and recipients:
         # email upload
         transfer_id = \
-            _prepare_email_upload(files, message, sender, recipients, s)['id']
+            _prepare_email_upload(files, display_name, message, sender, recipients, s)['id']
         _verify_email_upload(transfer_id, s)
     else:
         # link upload
-        transfer_id = _prepare_link_upload(files, message, s)['id']
+        transfer_id = _prepare_link_upload(files, display_name, message, s)['id']
 
     for f in files:
         file_id = _prepare_file_upload(transfer_id, f, s)['id']
@@ -361,6 +364,8 @@ if __name__ == '__main__':
 
     # upload subcommand
     up = sp.add_parser('upload', help='upload files')
+    up.add_argument('-n', type=str, default='', metavar='display_name',
+                    help='title for the transfer')
     up.add_argument('-m', type=str, default='', metavar='message',
                     help='message description for the transfer')
     up.add_argument('-f', type=str, metavar='from', help='sender email')
@@ -381,7 +386,7 @@ if __name__ == '__main__':
         exit(0)
 
     if args.action == 'upload':
-        print(upload(args.files, args.m, args.f, args.t))
+        print(upload(args.files, args.n, args.m, args.f, args.t))
         exit(0)
 
     # No action selected, print help message
