@@ -38,17 +38,17 @@ Otherwise the link upload will be used.
 
 ```
 % transferwee upload -h
-usage: transferwee upload [-h] [-m message] [-f from] [-t to [to ...]]
-                          file [file ...]
+usage: transferwee upload [-h] [-n display_name] [-m message] [-f from] [-t to [to ...]] file [file ...]
 
 positional arguments:
-  file            files to upload
+  file             files to upload
 
 optional arguments:
-  -h, --help      show this help message and exit
-  -m message      message description for the transfer
-  -f from         sender email
-  -t to [to ...]  recipient emails
+  -h, --help       show this help message and exit
+  -n display_name  display name for the transfer
+  -m message       message description for the transfer
+  -f from          sender email
+  -t to [to ...]   recipient emails
 ```
 
 The following example creates an `hello` text file with just `Hello world!` and
