@@ -330,7 +330,7 @@ def upload(files: List[str], name:str = '', message: str = '', sender: str = Non
     if sender and recipients:
         # email upload
         transfer_id = \
-            _prepare_email_upload(files, name, message, sender, recipients, s)['id']
+            _prepare_email_upload(files, display_name, message, sender, recipients, s)['id']
         _verify_email_upload(transfer_id, s)
     else:
         # link upload
