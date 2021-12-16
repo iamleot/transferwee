@@ -295,7 +295,7 @@ def _finalize_upload(transfer_id: str, session: requests.Session) -> str:
     return r.json()
 
 
-def upload(files: List[str], name:str = '', message: str = '', sender: str = None,
+def upload(files: List[str], display_name: str = '', message: str = '', sender: str = None,
            recipients: List[str] = []) -> str:
     """Given a list of files upload them and return the corresponding URL.
 
