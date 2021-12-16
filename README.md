@@ -46,7 +46,7 @@ positional arguments:
 
 optional arguments:
   -h, --help      show this help message and exit
-  -m name         display name for the transfer
+  -n display_name         display name for the transfer
   -m message      message description for the transfer
   -f from         sender email
   -t to [to ...]  recipient emails
