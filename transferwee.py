@@ -334,7 +334,7 @@ def upload(files: List[str], name:str = '', message: str = '', sender: str = Non
         _verify_email_upload(transfer_id, s)
     else:
         # link upload
-        transfer_id = _prepare_link_upload(files, name, message, s)['id']
+        transfer_id = _prepare_link_upload(files, display_name, message, s)['id']
 
     for f in files:
         file_id = _prepare_file_upload(transfer_id, f, s)['id']
