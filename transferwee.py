@@ -364,7 +364,7 @@ if __name__ == '__main__':
 
     # upload subcommand
     up = sp.add_parser('upload', help='upload files')
-    up.add_argument('-n', type=str, default='', metavar='name',
+    up.add_argument('-n', type=str, default='', metavar='display_name',
                     help='display name for the transfer')
     up.add_argument('-m', type=str, default='', metavar='message',
                     help='message description for the transfer')
