@@ -209,7 +209,7 @@ def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
     return r.json()
 
 
-def _prepare_link_upload(filenames: List[str], name: str, message: str,
+def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
                          session: requests.Session) -> str:
     """Given a list of filenames and a message prepare for the link upload.
 
