@@ -38,7 +38,7 @@ Otherwise the link upload will be used.
 
 ```
 % transferwee upload -h
-usage: transferwee upload [-h] [-n name] [-m message] [-f from] [-t to [to ...]]
+usage: transferwee upload [-h] [-n display_name] [-m message] [-f from] [-t to [to ...]]
                           file [file ...]
 
 positional arguments:
