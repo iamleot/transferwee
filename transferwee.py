@@ -217,7 +217,7 @@ def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
     """
     j = {
         "files": [_file_name_and_size(f) for f in filenames],
-        "display_name": name,
+        "display_name": display_name,
         "message": message,
         "ui_language": "en",
     }
