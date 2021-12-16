@@ -386,7 +386,7 @@ if __name__ == '__main__':
         exit(0)
 
     if args.action == 'upload':
-        print(upload(args.files,args.n,args.m, args.f, args.t))
+        print(upload(args.files,args.n, args.m, args.f, args.t))
         exit(0)
 
     # No action selected, print help message
