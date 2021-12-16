@@ -300,7 +300,7 @@ def upload(files: List[str], name:str = '', message: str = '', sender: str = Non
     """Given a list of files upload them and return the corresponding URL.
 
     Also accepts optional parameters:
-     - `name': name used as a display name of the transfer
+     - `display_name': display name used when downloading a transfer
      - `message': message used as a description of the transfer
      - `sender': email address used to receive an ACK if the upload is
                  successfull. For every download by the recipients an email
