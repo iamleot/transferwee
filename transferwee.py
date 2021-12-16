@@ -171,7 +171,7 @@ def _prepare_session() -> requests.Session:
     return s
 
 
-def _prepare_email_upload(filenames: List[str], name: str, message: str,
+def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
                           sender: str, recipients: List[str],
                           session: requests.Session) -> str:
     """Given a list of filenames, message a sender and recipients prepare for
