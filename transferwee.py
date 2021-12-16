@@ -182,7 +182,7 @@ def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
     j = {
         "files": [_file_name_and_size(f) for f in filenames],
         "from": sender,
-        "display_name": name,
+        "display_name": display_name,
         "message": message,
         "recipients": recipients,
         "ui_language": "en",
