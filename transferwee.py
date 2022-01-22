@@ -139,7 +139,7 @@ def download(url: str, file: str = '') -> None:
     length = int(r.headers.get('content-length'))
     with open(file, 'wb') as f:
         if r is None: # no content length header
-                f.write(r.content)
+            f.write(r.content)
         else:
             dl = 0
             progress_bar = tqdm(total=length, unit='iB', unit_scale=True)
