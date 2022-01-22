@@ -92,6 +92,7 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
   -g          only print the direct link (without downloading it)
+  -s          show the status of the downloading progress (need tqdm module)
   -o file     output file to be used
 ```
 
