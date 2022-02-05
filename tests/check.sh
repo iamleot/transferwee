@@ -20,7 +20,7 @@ echo "Creating a test file..."
 echo "Hello world!" > "${testtmpfile}"
 
 echo "Uploading the test file..."
-url=$(${TRANSFERWEE} upload -m 'Just a text file with the mandatory message...' "${testtmpfile}")
+url=$(${TRANSFERWEE} upload -n 'Nice transfer title' -m 'Just a text file with the mandatory message...' "${testtmpfile}")
 echo "test file uploaded as ${url}"
 
 echo "Renaming original test file..."
