@@ -268,10 +268,10 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
             json=j)
         url = r.json().get('url')
         requests.options(url,
-                             headers={
-                                 'Origin': 'https://wetransfer.com',
-                                 'Access-Control-Request-Method': 'PUT',
-                             })
+                         headers={
+                             'Origin': 'https://wetransfer.com',
+                             'Access-Control-Request-Method': 'PUT',
+                         })
         requests.put(url, data=chunk)
 
     j = {
