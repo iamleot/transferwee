@@ -43,7 +43,6 @@ import os.path
 import re
 import urllib.parse
 import zlib
-
 import requests
 
 
@@ -121,7 +120,7 @@ def _file_unquote(file: str) -> str:
     return urllib.parse.unquote(file).replace('../', '').replace('/', '').replace('\\', '')
 
 
-def download(url: str, file: str = '') -> None:
+def download(url: str, file: str = '', use_progress_bar: bool = False) -> None:
     """Given a `we.tl/' or `wetransfer.com/downloads/' download it.
 
     First a direct link is retrieved (via download_url()), the filename can be
@@ -132,11 +131,21 @@ def download(url: str, file: str = '') -> None:
     dl_url = download_url(url)
     if not file:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
-
+    
     r = requests.get(dl_url, stream=True)
     with open(file, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            f.write(chunk)
+        if use_progress_bar:
+            from tqdm import tqdm
+            dl = 0
+            progress_bar = tqdm(total = int(r.headers.get('content-length')), unit = 'iB', unit_scale = True)
+            for data in r.iter_content(chunk_size=1024):
+                dl += len(data)
+                f.write(data)
+                progress_bar.update(len(data))
+            progress_bar.close()
+        else:
+            for chunk in r.iter_content(chunk_size=1024):
+                f.write(chunk)
 
 
 def _file_name_and_size(file: str) -> dict:
@@ -357,6 +366,8 @@ if __name__ == '__main__':
     dp = sp.add_parser('download', help='download files')
     dp.add_argument('-g', action='store_true',
                     help='only print the direct link (without downloading it)')
+    dp.add_argument('-s', action='store_true',
+                    help='show the status of the downloading progress (need tqdm module)')
     dp.add_argument('-o', type=str, default='', metavar='file',
                     help='output file to be used')
     dp.add_argument('url', nargs='+', type=str, metavar='url',
@@ -375,14 +386,13 @@ if __name__ == '__main__':
                     help='files to upload')
 
     args = ap.parse_args()
-
     if args.action == 'download':
         if args.g:
             for u in args.url:
                 print(download_url(u))
         else:
             for u in args.url:
-                download(u, args.o)
+                download(u, args.o, args.s)
         exit(0)
 
     if args.action == 'upload':
