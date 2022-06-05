@@ -38,17 +38,18 @@ Otherwise the link upload will be used.
 
 ```
 % transferwee upload -h
-usage: transferwee upload [-h] [-n display_name] [-m message] [-f from] [-t to [to ...]] file [file ...]
+usage: transferwee upload [-h] [-n display_name] [-m message] [-f from] [-t to [to ...]] [-v] file [file ...]
 
 positional arguments:
   file             files to upload
 
 optional arguments:
   -h, --help       show this help message and exit
-  -n display_name  display name for the transfer
+  -n display_name  title for the transfer
   -m message       message description for the transfer
   -f from          sender email
   -t to [to ...]   recipient emails
+  -v               get verbose/debug logging
 ```
 
 The following example creates an `hello` text file with just `Hello world!` and
@@ -84,7 +85,7 @@ The URL supported are the ones in the form:
 
 ```
 % transferwee download -h
-usage: transferwee download [-h] [-g] [-o file] url [url ...]
+usage: transferwee download [-h] [-g] [-o file] [-v] url [url ...]
 
 positional arguments:
   url         URL (we.tl/... or wetransfer.com/downloads/...)
@@ -93,6 +94,7 @@ optional arguments:
   -h, --help  show this help message and exit
   -g          only print the direct link (without downloading it)
   -o file     output file to be used
+  -v          get verbose/debug logging
 ```
 
 The following example download the `hello` text file that was uploaded in the
