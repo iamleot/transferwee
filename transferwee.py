@@ -39,6 +39,7 @@ will be shared via emails or link.
 """
 
 from typing import List
+import logging
 import os.path
 import re
 import urllib.parse
@@ -59,6 +60,9 @@ WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
 
 WETRANSFER_DEFAULT_CHUNK_SIZE = 5242880
 WETRANSFER_EXPIRE_IN = 604800
+
+
+logger = logging.getLogger(__name__)
 
 
 def download_url(url: str) -> str:
@@ -83,9 +87,11 @@ def download_url(url: str) -> str:
     Return the download URL (AKA `direct_link') as a str or None if the URL
     could not be parsed.
     """
+    logger.debug(f'Getting download URL of {url}')
     # Follow the redirect if we have a short URL
     if url.startswith('https://we.tl/'):
         r = requests.head(url, allow_redirects=True)
+        logger.debug(f'Short URL {url} redirects to {r.url}')
         url = r.url
 
     recipient_id = None
@@ -98,6 +104,7 @@ def download_url(url: str) -> str:
     else:
         return None
 
+    logger.debug(f'Getting direct_link of {url}')
     j = {
         "intent": "entire_transfer",
         "security_hash": security_hash,
@@ -129,10 +136,12 @@ def download(url: str, file: str = '') -> None:
     will be extracted to it and it will be fetched and stored on the current
     working directory.
     """
+    logger.debug(f'Downloading {url}')
     dl_url = download_url(url)
     if not file:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
+    logger.debug(f'Fetching {dl_url}')
     r = requests.get(dl_url, stream=True)
     with open(file, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
@@ -315,16 +324,19 @@ def upload(files: List[str], display_name: str = '', message: str = '', sender: 
     """
 
     # Check that all files exists
+    logger.debug(f'Checking that all files exists')
     for f in files:
         if not os.path.exists(f):
             raise FileNotFoundError(f)
 
     # Check that there are no duplicates filenames
     # (despite possible different dirname())
+    logger.debug(f'Checking for no duplicate filenames')
     filenames = [os.path.basename(f) for f in files]
     if len(files) != len(set(filenames)):
         raise FileExistsError('Duplicate filenames')
 
+    logger.debug(f'Preparing to upload')
     transfer_id = None
     s = _prepare_session()
     if sender and recipients:
@@ -336,16 +348,23 @@ def upload(files: List[str], display_name: str = '', message: str = '', sender: 
         # link upload
         transfer_id = _prepare_link_upload(files, display_name, message, s)['id']
 
+    logger.debug(f'Get transfer id {transfer_id}')
     for f in files:
+        logger.debug(f'Uploading {f} as part of transfer_id {transfer_id}')
         file_id = _prepare_file_upload(transfer_id, f, s)['id']
         _upload_chunks(transfer_id, file_id, f, s)
 
+    logger.debug(f'Finalizing upload with transfer id {transfer_id}')
     return _finalize_upload(transfer_id, s)['shortened_url']
 
 
 if __name__ == '__main__':
     from sys import exit
     import argparse
+
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+    log.addHandler(logging.StreamHandler())
 
     ap = argparse.ArgumentParser(
         prog='transferwee',
@@ -359,6 +378,8 @@ if __name__ == '__main__':
                     help='only print the direct link (without downloading it)')
     dp.add_argument('-o', type=str, default='', metavar='file',
                     help='output file to be used')
+    dp.add_argument('-v', action='store_true',
+                    help='get verbose/debug logging')
     dp.add_argument('url', nargs='+', type=str, metavar='url',
                     help='URL (we.tl/... or wetransfer.com/downloads/...)')
 
@@ -371,10 +392,15 @@ if __name__ == '__main__':
     up.add_argument('-f', type=str, metavar='from', help='sender email')
     up.add_argument('-t', nargs='+', type=str, metavar='to',
                     help='recipient emails')
+    up.add_argument('-v', action='store_true',
+                    help='get verbose/debug logging')
     up.add_argument('files', nargs='+', type=str, metavar='file',
                     help='files to upload')
 
     args = ap.parse_args()
+
+    if args.v:
+        log.setLevel(logging.DEBUG)
 
     if args.action == 'download':
         if args.g:
