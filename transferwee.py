@@ -38,7 +38,7 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-from typing import List
+from typing import List, Optional
 import logging
 import os.path
 import re
@@ -65,7 +65,7 @@ WETRANSFER_EXPIRE_IN = 604800
 logger = logging.getLogger(__name__)
 
 
-def download_url(url: str) -> str:
+def download_url(url: str) -> Optional[str]:
     """Given a wetransfer.com download URL download return the downloadable URL.
 
     The URL should be of the form `https://we.tl/' or
@@ -112,6 +112,8 @@ def download_url(url: str) -> str:
     if recipient_id:
         j["recipient_id"] = recipient_id
     s = _prepare_session()
+    if not s:
+        raise ConnectionError('Could not prepare session')
     r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
                json=j)
 
@@ -138,6 +140,9 @@ def download(url: str, file: str = '') -> None:
     """
     logger.debug(f'Downloading {url}')
     dl_url = download_url(url)
+    if not dl_url:
+        logger.error(f'Could not find direct link of {url}')
+        return None
     if not file:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
@@ -162,7 +167,7 @@ def _file_name_and_size(file: str) -> dict:
     }
 
 
-def _prepare_session() -> requests.Session:
+def _prepare_session() -> Optional[requests.Session]:
     """Prepare a wetransfer.com session.
 
     Return a requests session that will always pass the required headers
@@ -172,6 +177,9 @@ def _prepare_session() -> requests.Session:
     s = requests.Session()
     r = s.get('https://wetransfer.com/')
     m = re.search('name="csrf-token" content="([^"]+)"', r.text)
+    if not m:
+        logger.error(f'Could not find any csrf-token')
+        return None
     s.headers.update({
         'x-csrf-token': m.group(1),
         'x-requested-with': 'XMLHttpRequest',
@@ -182,7 +190,7 @@ def _prepare_session() -> requests.Session:
 
 def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
                           sender: str, recipients: List[str],
-                          session: requests.Session) -> str:
+                          session: requests.Session) -> dict:
     """Given a list of filenames, message a sender and recipients prepare for
     the email upload.
 
@@ -219,7 +227,7 @@ def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
 
 
 def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
-                         session: requests.Session) -> str:
+                         session: requests.Session) -> dict:
     """Given a list of filenames and a message prepare for the link upload.
 
     Return the parsed JSON response.
@@ -236,7 +244,7 @@ def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
 
 
 def _prepare_file_upload(transfer_id: str, file: str,
-                         session: requests.Session) -> str:
+                         session: requests.Session) -> dict:
     """Given a transfer_id and file prepare it for the upload.
 
     Return the parsed JSON response.
@@ -294,7 +302,7 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
     return r.json()
 
 
-def _finalize_upload(transfer_id: str, session: requests.Session) -> str:
+def _finalize_upload(transfer_id: str, session: requests.Session) -> dict:
     """Given a transfer_id finalize the upload.
 
     Return the parsed JSON response.
@@ -339,6 +347,8 @@ def upload(files: List[str], display_name: str = '', message: str = '', sender: 
     logger.debug(f'Preparing to upload')
     transfer_id = None
     s = _prepare_session()
+    if not s:
+        raise ConnectionError('Could not prepare session')
     if sender and recipients:
         # email upload
         transfer_id = \
