@@ -262,34 +262,33 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
 
     Return the parsed JSON response.
     """
-    f = open(file, 'rb')
+    with open(file, 'rb') as f:
+        chunk_number = 0
+        while True:
+            chunk = f.read(default_chunk_size)
+            chunk_size = len(chunk)
+            if chunk_size == 0:
+                break
+            chunk_number += 1
 
-    chunk_number = 0
-    while True:
-        chunk = f.read(default_chunk_size)
-        chunk_size = len(chunk)
-        if chunk_size == 0:
-            break
-        chunk_number += 1
+            j = {
+                "chunk_crc": zlib.crc32(chunk),
+                "chunk_number": chunk_number,
+                "chunk_size": chunk_size,
+                "retries": 0
+            }
 
-        j = {
-            "chunk_crc": zlib.crc32(chunk),
-            "chunk_number": chunk_number,
-            "chunk_size": chunk_size,
-            "retries": 0
-        }
-
-        r = session.post(
-            WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
-                                           file_id=file_id),
-            json=j)
-        url = r.json().get('url')
-        requests.options(url,
-                         headers={
-                             'Origin': 'https://wetransfer.com',
-                             'Access-Control-Request-Method': 'PUT',
-                         })
-        requests.put(url, data=chunk)
+            r = session.post(
+                WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
+                                               file_id=file_id),
+                json=j)
+            url = r.json().get('url')
+            requests.options(url,
+                             headers={
+                                 'Origin': 'https://wetransfer.com',
+                                 'Access-Control-Request-Method': 'PUT',
+                             })
+            requests.put(url, data=chunk)
 
     j = {
         'chunk_count': chunk_number
