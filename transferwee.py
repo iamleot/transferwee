@@ -188,6 +188,14 @@ def _prepare_session() -> Optional[requests.Session]:
     return s
 
 
+def _close_session(s: requests.Session) -> None:
+    """Close a wetransfer.com session.
+
+    Terminate wetransfer.com session.
+    """
+    s.close()
+
+
 def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
                           sender: str, recipients: List[str],
                           session: requests.Session) -> dict:
