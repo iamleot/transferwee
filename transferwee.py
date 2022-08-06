@@ -116,6 +116,7 @@ def download_url(url: str) -> Optional[str]:
         raise ConnectionError('Could not prepare session')
     r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
                json=j)
+    _close_session(s)
 
     j = r.json()
     return j.get('direct_link')
@@ -372,7 +373,9 @@ def upload(files: List[str], display_name: str = '', message: str = '', sender: 
         _upload_chunks(transfer_id, file_id, f, s)
 
     logger.debug(f'Finalizing upload with transfer id {transfer_id}')
-    return _finalize_upload(transfer_id, s)['shortened_url']
+    shortened_url = _finalize_upload(transfer_id, s)['shortened_url']
+    _close_session(s)
+    return shortened_url
 
 
 if __name__ == '__main__':
