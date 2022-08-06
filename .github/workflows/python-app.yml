@@ -45,5 +45,8 @@ jobs:
         mypy .
     - name: Test transferwee
       shell: bash
+      env:
+        PYTHONDEVMODE: 1
+        PYTHONTRACEMALLOC: 1
       run: |
         cd tests && ./check.sh
