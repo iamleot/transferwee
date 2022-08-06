@@ -380,7 +380,7 @@ if __name__ == '__main__':
         prog='transferwee',
         description='Download/upload files via wetransfer.com'
     )
-    sp = ap.add_subparsers(dest='action', help='action')
+    sp = ap.add_subparsers(dest='action', help='action', required=True)
 
     # download subcommand
     dp = sp.add_parser('download', help='download files')
@@ -424,7 +424,3 @@ if __name__ == '__main__':
     if args.action == 'upload':
         print(upload(args.files, args.n, args.m, args.f, args.t))
         exit(0)
-
-    # No action selected, print help message
-    ap.print_help()
-    exit(1)
