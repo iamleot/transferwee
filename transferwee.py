@@ -61,6 +61,9 @@ WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
 WETRANSFER_DEFAULT_CHUNK_SIZE = 5242880
 WETRANSFER_EXPIRE_IN = 604800
 
+USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+REQUEST_HEADER = {'User-Agent': USER_AGENT}
+
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +93,7 @@ def download_url(url: str) -> Optional[str]:
     logger.debug(f'Getting download URL of {url}')
     # Follow the redirect if we have a short URL
     if url.startswith('https://we.tl/'):
-        r = requests.head(url, allow_redirects=True)
+        r = requests.head(url, allow_redirects=True, headers=REQUEST_HEADER)
         logger.debug(f'Short URL {url} redirects to {r.url}')
         url = r.url
 
@@ -115,7 +118,7 @@ def download_url(url: str) -> Optional[str]:
     if not s:
         raise ConnectionError('Could not prepare session')
     r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
-               json=j)
+               json=j, headers=REQUEST_HEADER)
     _close_session(s)
 
     j = r.json()
@@ -148,7 +151,7 @@ def download(url: str, file: str = '') -> None:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
     logger.debug(f'Fetching {dl_url}')
-    r = requests.get(dl_url, stream=True)
+    r = requests.get(dl_url, stream=True, headers=REQUEST_HEADER)
     with open(file, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             f.write(chunk)
@@ -176,7 +179,7 @@ def _prepare_session() -> Optional[requests.Session]:
     requests.
     """
     s = requests.Session()
-    r = s.get('https://wetransfer.com/')
+    r = s.get('https://wetransfer.com/', headers=REQUEST_HEADER)
     m = re.search('name="csrf-token" content="([^"]+)"', r.text)
     if not m:
         logger.error(f'Could not find any csrf-token')
@@ -214,7 +217,7 @@ def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
         "ui_language": "en",
     }
 
-    r = session.post(WETRANSFER_UPLOAD_EMAIL_URL, json=j)
+    r = session.post(WETRANSFER_UPLOAD_EMAIL_URL, json=j, headers=REQUEST_HEADER)
     return r.json()
 
 
@@ -231,7 +234,7 @@ def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
     }
 
     r = session.post(WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id),
-                     json=j)
+                     json=j, headers=REQUEST_HEADER)
     return r.json()
 
 
@@ -248,7 +251,7 @@ def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
         "ui_language": "en",
     }
 
-    r = session.post(WETRANSFER_UPLOAD_LINK_URL, json=j)
+    r = session.post(WETRANSFER_UPLOAD_LINK_URL, json=j, headers=REQUEST_HEADER)
     return r.json()
 
 
@@ -260,7 +263,7 @@ def _prepare_file_upload(transfer_id: str, file: str,
     """
     j = _file_name_and_size(file)
     r = session.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
-                     json=j)
+                     json=j, headers=REQUEST_HEADER)
     return r.json()
 
 
@@ -290,7 +293,7 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
             r = session.post(
                 WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
                                                file_id=file_id),
-                json=j)
+                json=j, headers=REQUEST_HEADER)
             url = r.json().get('url')
             requests.options(url,
                              headers={
