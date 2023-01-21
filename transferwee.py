@@ -60,6 +60,7 @@ WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
 
 WETRANSFER_DEFAULT_CHUNK_SIZE = 5242880
 WETRANSFER_EXPIRE_IN = 604800
+WETRANSFER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0'
 
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,8 @@ def download_url(url: str) -> Optional[str]:
     logger.debug(f'Getting download URL of {url}')
     # Follow the redirect if we have a short URL
     if url.startswith('https://we.tl/'):
-        r = requests.head(url, allow_redirects=True)
+        r = requests.head(url, allow_redirects=True,
+                          headers={'User-Agent': WETRANSFER_USER_AGENT})
         logger.debug(f'Short URL {url} redirects to {r.url}')
         url = r.url
 
@@ -148,7 +150,8 @@ def download(url: str, file: str = '') -> None:
         file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
 
     logger.debug(f'Fetching {dl_url}')
-    r = requests.get(dl_url, stream=True)
+    r = requests.get(dl_url, headers={'User-Agent': WETRANSFER_USER_AGENT},
+                     stream=True)
     with open(file, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             f.write(chunk)
@@ -176,6 +179,7 @@ def _prepare_session() -> Optional[requests.Session]:
     requests.
     """
     s = requests.Session()
+    s.headers.update({'User-Agent': WETRANSFER_USER_AGENT})
     r = s.get('https://wetransfer.com/')
     m = re.search('name="csrf-token" content="([^"]+)"', r.text)
     if not m:
@@ -296,8 +300,10 @@ def _upload_chunks(transfer_id: str, file_id: str, file: str,
                              headers={
                                  'Origin': 'https://wetransfer.com',
                                  'Access-Control-Request-Method': 'PUT',
+                                 'User-Agent': WETRANSFER_USER_AGENT,
                              })
-            requests.put(url, data=chunk)
+            requests.put(url, data=chunk,
+                         headers={'User-Agent': WETRANSFER_USER_AGENT})
 
     j = {
         'chunk_count': chunk_number
