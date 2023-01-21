@@ -33,6 +33,9 @@ jobs:
         pip install flake8
         pip install mypy
         pip install requests
+    - name: Install Tor
+      run: |
+        sudo apt-get install tor
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -49,4 +52,4 @@ jobs:
         PYTHONDEVMODE: 1
         PYTHONTRACEMALLOC: 1
       run: |
-        cd tests && ./check.sh
+        cd tests && torify ./check.sh
