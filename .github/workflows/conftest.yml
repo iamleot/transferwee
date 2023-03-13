@@ -1,0 +1,21 @@
+name: Validate via personal conftest policies
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  conftest:
+    name: Validate via personal conftest policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Validate via personal conftest policies
+        uses: docker://openpolicyagent/conftest:latest
+        env:
+          CONFTEST_POLICIES: git::https://github.com/iamleot/conftest-policies.git//policy/github
+        with:
+          args: test --all-namespaces --update "${{ env.CONFTEST_POLICIES }}" .github/workflows
