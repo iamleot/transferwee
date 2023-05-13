@@ -158,14 +158,15 @@ def download(url: str, file: str = '') -> None:
 
 
 def _file_name_and_size(file: str) -> dict:
-    """Given a file, prepare the "name" and "size" dictionary.
+    """Given a file, prepare the "item_type", "name" and "size" dictionary.
 
-    Return a dictionary with "name" and "size" keys.
+    Return a dictionary with "item_type", "name" and "size" keys.
     """
     filename = os.path.basename(file)
     filesize = os.path.getsize(file)
 
     return {
+        "item_type": "file",
         "name": filename,
         "size": filesize
     }
