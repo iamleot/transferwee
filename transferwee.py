@@ -39,11 +39,14 @@ will be shared via emails or link.
 """
 
 from typing import List, Optional
+import binascii
+import functools
+import hashlib
 import logging
 import os.path
 import re
+import time
 import urllib.parse
-import zlib
 
 import requests
 
@@ -53,12 +56,16 @@ WETRANSFER_DOWNLOAD_URL = WETRANSFER_API_URL + '/{transfer_id}/download'
 WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + '/email'
 WETRANSFER_VERIFY_URL = WETRANSFER_API_URL + '/{transfer_id}/verify'
 WETRANSFER_UPLOAD_LINK_URL = WETRANSFER_API_URL + '/link'
-WETRANSFER_FILES_URL = WETRANSFER_API_URL + '/{transfer_id}/files'
-WETRANSFER_PART_PUT_URL = WETRANSFER_FILES_URL + '/{file_id}/part-put-url'
-WETRANSFER_FINALIZE_MPP_URL = WETRANSFER_FILES_URL + '/{file_id}/finalize-mpp'
 WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
 
-WETRANSFER_DEFAULT_CHUNK_SIZE = 5242880
+# XXX: There are probably other region as well (very likely a subset of AWS
+# XXX: regions). A way to find them should be investigated and then the
+# XXX: nearest one should be picked up.
+WETRANSFER_STORM_URL = 'https://storm-eu-west-1.wetransfer.net/api/v2'
+WETRANSFER_STORM_PREFLIGHT = WETRANSFER_STORM_URL + '/batch/preflight'
+WETRANSFER_STORM_BLOCK = WETRANSFER_STORM_URL + '/blocks'
+WETRANSFER_STORM_BATCH = WETRANSFER_STORM_URL + '/batch'
+
 WETRANSFER_EXPIRE_IN = 604800
 WETRANSFER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0'
 
@@ -223,7 +230,7 @@ def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
     return r.json()
 
 
-def _verify_email_upload(transfer_id: str, session: requests.Session) -> str:
+def _verify_email_upload(transfer_id: str, session: requests.Session) -> dict:
     """Given a transfer_id, read the code from standard input.
 
     Return the parsed JSON response.
@@ -257,64 +264,171 @@ def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
     return r.json()
 
 
-def _prepare_file_upload(transfer_id: str, file: str,
-                         session: requests.Session) -> dict:
-    """Given a transfer_id and file prepare it for the upload.
+def _storm_preflight_item(file: str) -> dict:
+    """Given a file, prepare the item block dictionary.
 
-    Return the parsed JSON response.
+    Return a dictionary with "blocks", "item_type" and "path" keys.
     """
-    j = _file_name_and_size(file)
-    r = session.post(WETRANSFER_FILES_URL.format(transfer_id=transfer_id),
-                     json=j)
-    return r.json()
+    filename = os.path.basename(file)
+    filesize = os.path.getsize(file)
 
-
-def _upload_chunks(transfer_id: str, file_id: str, file: str,
-                   session: requests.Session,
-                   default_chunk_size: int = WETRANSFER_DEFAULT_CHUNK_SIZE) -> str:
-    """Given a transfer_id, file_id and file upload it.
-
-    Return the parsed JSON response.
-    """
-    with open(file, 'rb') as f:
-        chunk_number = 0
-        while True:
-            chunk = f.read(default_chunk_size)
-            chunk_size = len(chunk)
-            if chunk_size == 0:
-                break
-            chunk_number += 1
-
-            j = {
-                "chunk_crc": zlib.crc32(chunk),
-                "chunk_number": chunk_number,
-                "chunk_size": chunk_size,
-                "retries": 0
+    return {
+        "blocks": [
+            {
+                "content_length": filesize
             }
-
-            r = session.post(
-                WETRANSFER_PART_PUT_URL.format(transfer_id=transfer_id,
-                                               file_id=file_id),
-                json=j)
-            url = r.json().get('url')
-            requests.options(url,
-                             headers={
-                                 'Origin': 'https://wetransfer.com',
-                                 'Access-Control-Request-Method': 'PUT',
-                                 'User-Agent': WETRANSFER_USER_AGENT,
-                             })
-            requests.put(url, data=chunk,
-                         headers={'User-Agent': WETRANSFER_USER_AGENT})
-
-    j = {
-        'chunk_count': chunk_number
+        ],
+        "item_type": "file",
+        "path": filename,
     }
-    r = session.put(
-        WETRANSFER_FINALIZE_MPP_URL.format(transfer_id=transfer_id,
-                                           file_id=file_id),
-        json=j)
+
+
+def _storm_preflight(authorization: str, filenames: List[str]) -> dict:
+    """Given an Authorization token and filenames do preflight for upload.
+
+    Return the parsed JSON response.
+    """
+    j = {
+        "items": [_storm_preflight_item(f) for f in filenames],
+    }
+    requests.options(WETRANSFER_STORM_PREFLIGHT,
+                     headers={
+                         'Origin': 'https://wetransfer.com',
+                         'Access-Control-Request-Method': 'POST',
+                         'User-Agent': WETRANSFER_USER_AGENT,
+                     })
+    r = requests.post(WETRANSFER_STORM_PREFLIGHT, json=j,
+                      headers={
+                          'Authorization': f'Bearer {authorization}',
+                          'User-Agent': WETRANSFER_USER_AGENT,
+                      })
+    return r.json()
+
+
+def _md5(file: str) -> str:
+    """Given a file, calculate its MD5 checksum.
+
+    Return MD5 digest as str.
+    """
+    h = hashlib.md5()
+    with open(file, 'rb') as f:
+        for chunk in iter(functools.partial(f.read, 4096), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _storm_prepare_item(file: str) -> dict:
+    """Given a file, prepare the block for blocks dictionary.
+
+    Return a dictionary with "content_length" and "content_md5_hex" keys.
+    """
+    filesize = os.path.getsize(file)
+
+    return {
+        "content_length": filesize,
+        "content_md5_hex": _md5(file)
+    }
+
+
+def _storm_prepare(authorization: str, filenames: List[str]) -> dict:
+    """Given an Authorization token and filenames prepare for block uploads.
+
+    Return the parsed JSON response.
+    """
+    j = {
+        "blocks": [_storm_prepare_item(f) for f in filenames],
+    }
+    requests.options(WETRANSFER_STORM_BLOCK,
+                     headers={
+                         'Origin': 'https://wetransfer.com',
+                         'Access-Control-Request-Method': 'POST',
+                         'User-Agent': WETRANSFER_USER_AGENT,
+                     })
+    r = requests.post(WETRANSFER_STORM_BLOCK, json=j,
+                      headers={
+                          'Authorization': f'Bearer {authorization}',
+                          'Origin': 'https://wetransfer.com',
+                          'User-Agent': WETRANSFER_USER_AGENT,
+                      })
+    return r.json()
+
+
+def _storm_finalize_item(file: str, block_id: str) -> dict:
+    """Given a file and block_id prepare the item block dictionary.
+
+    Return a dictionary with "block_ids", "item_type" and "path" keys.
+
+    XXX: Is it possible to actually have more than one block?
+    XXX: If yes this - and probably other parts of the code involved with
+    XXX: blocks - needs to be instructed to handle them instead of
+    XXX: assuming that one file is associated with one block.
+    """
+    filename = os.path.basename(file)
+
+    return {
+        "block_ids": [
+            block_id,
+        ],
+        "item_type": "file",
+        "path": filename,
+    }
+
+
+def _storm_finalize(authorization: str, filenames: List[str],
+                    block_ids: List[str]) -> dict:
+    """Given an Authorization token, filenames and block ids finalize upload.
+
+    Return the parsed JSON response.
+    """
+    j = {
+        "items": [_storm_finalize_item(f, bid) for f, bid in zip(filenames, block_ids)],
+    }
+    requests.options(WETRANSFER_STORM_BATCH,
+                     headers={
+                         'Origin': 'https://wetransfer.com',
+                         'Access-Control-Request-Method': 'POST',
+                         'User-Agent': WETRANSFER_USER_AGENT,
+                     })
+
+    for i in range(0, 5):
+        r = requests.post(WETRANSFER_STORM_BATCH, json=j,
+                          headers={
+                              'Authorization': f'Bearer {authorization}',
+                              'Origin': 'https://wetransfer.com',
+                              'User-Agent': WETRANSFER_USER_AGENT,
+                          })
+        if r.status_code == 200:
+            break
+        else:
+            # HTTP request can have 425 HTTP status code and fails with
+            # error_code 'BLOCKS_STILL_EXPECTED'. Retry in that and any
+            # non-200 cases.
+            logger.debug(f'Request against {WETRANSFER_STORM_BATCH} returned ' +
+                         f'{r.status_code}, retrying in {2 ** i} seconds')
+            time.sleep(2 ** i)
 
     return r.json()
+
+
+def _storm_upload(url: str, file: str) -> None:
+    """Given an url and file upload it.
+
+    Does not return anything.
+    """
+    requests.options(url,
+                     headers={
+                         'Origin': 'https://wetransfer.com',
+                         'Access-Control-Request-Method': 'PUT',
+                         'User-Agent': WETRANSFER_USER_AGENT,
+                     })
+    with open(file, 'rb') as f:
+        requests.put(url, data=f,
+                     headers={
+                        'Origin': 'https://wetransfer.com',
+                        'Content-MD5': binascii.b2a_base64(binascii.unhexlify(_md5(file)), newline=False),
+                        'X-Uploader': 'storm',
+                        'User-Agent': WETRANSFER_USER_AGENT,
+                     })
 
 
 def _finalize_upload(transfer_id: str, session: requests.Session) -> dict:
@@ -322,7 +436,11 @@ def _finalize_upload(transfer_id: str, session: requests.Session) -> dict:
 
     Return the parsed JSON response.
     """
-    r = session.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id))
+    j = {
+        "wants_storm": True,
+    }
+    r = session.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id),
+                    json=j)
 
     return r.json()
 
@@ -361,27 +479,32 @@ def upload(files: List[str], display_name: str = '', message: str = '',
         raise FileExistsError('Duplicate filenames')
 
     logger.debug(f'Preparing to upload')
-    transfer_id = None
+    transfer = None
     s = _prepare_session()
     if not s:
         raise ConnectionError('Could not prepare session')
     if sender and recipients:
         # email upload
-        transfer_id = \
-            _prepare_email_upload(files, display_name, message, sender, recipients, s)['id']
-        _verify_email_upload(transfer_id, s)
+        transfer = \
+            _prepare_email_upload(files, display_name, message, sender, recipients, s)
+        transfer = _verify_email_upload(transfer['id'], s)
     else:
         # link upload
-        transfer_id = _prepare_link_upload(files, display_name, message, s)['id']
+        transfer = _prepare_link_upload(files, display_name, message, s)
 
-    logger.debug(f'Get transfer id {transfer_id}')
-    for f in files:
-        logger.debug(f'Uploading {f} as part of transfer_id {transfer_id}')
-        file_id = _prepare_file_upload(transfer_id, f, s)['id']
-        _upload_chunks(transfer_id, file_id, f, s)
-
-    logger.debug(f'Finalizing upload with transfer id {transfer_id}')
-    shortened_url = _finalize_upload(transfer_id, s)['shortened_url']
+    logger.debug(f"Get transfer id {transfer['id']}")
+    logger.debug(f"Doing prefligh storm")
+    _storm_preflight(transfer['storm_upload_token'], files)
+    logger.debug(f"Preparing storm block upload")
+    blocks = _storm_prepare(transfer['storm_upload_token'], files)
+    for f, b in zip(files, blocks['data']['blocks']):
+        logger.debug(f"Uploading file {f}")
+        _storm_upload(b['presigned_put_url'], f)
+    logger.debug(f"Finalizing storm batch upload")
+    _storm_finalize(transfer['storm_upload_token'], files,
+                    [b['block_id'] for b in blocks['data']['blocks']])
+    logger.debug(f"Finalizing upload with transfer id {transfer['id']}")
+    shortened_url = _finalize_upload(transfer['id'], s)['shortened_url']
     _close_session(s)
     return shortened_url
 
