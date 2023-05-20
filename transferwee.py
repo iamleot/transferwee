@@ -51,23 +51,23 @@ import urllib.parse
 import requests
 
 
-WETRANSFER_API_URL = 'https://wetransfer.com/api/v4/transfers'
-WETRANSFER_DOWNLOAD_URL = WETRANSFER_API_URL + '/{transfer_id}/download'
-WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + '/email'
-WETRANSFER_VERIFY_URL = WETRANSFER_API_URL + '/{transfer_id}/verify'
-WETRANSFER_UPLOAD_LINK_URL = WETRANSFER_API_URL + '/link'
-WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + '/{transfer_id}/finalize'
+WETRANSFER_API_URL = "https://wetransfer.com/api/v4/transfers"
+WETRANSFER_DOWNLOAD_URL = WETRANSFER_API_URL + "/{transfer_id}/download"
+WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + "/email"
+WETRANSFER_VERIFY_URL = WETRANSFER_API_URL + "/{transfer_id}/verify"
+WETRANSFER_UPLOAD_LINK_URL = WETRANSFER_API_URL + "/link"
+WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + "/{transfer_id}/finalize"
 
 # XXX: There are probably other region as well (very likely a subset of AWS
 # XXX: regions). A way to find them should be investigated and then the
 # XXX: nearest one should be picked up.
-WETRANSFER_STORM_URL = 'https://storm-eu-west-1.wetransfer.net/api/v2'
-WETRANSFER_STORM_PREFLIGHT = WETRANSFER_STORM_URL + '/batch/preflight'
-WETRANSFER_STORM_BLOCK = WETRANSFER_STORM_URL + '/blocks'
-WETRANSFER_STORM_BATCH = WETRANSFER_STORM_URL + '/batch'
+WETRANSFER_STORM_URL = "https://storm-eu-west-1.wetransfer.net/api/v2"
+WETRANSFER_STORM_PREFLIGHT = WETRANSFER_STORM_URL + "/batch/preflight"
+WETRANSFER_STORM_BLOCK = WETRANSFER_STORM_URL + "/blocks"
+WETRANSFER_STORM_BATCH = WETRANSFER_STORM_URL + "/batch"
 
 WETRANSFER_EXPIRE_IN = 604800
-WETRANSFER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0'
+WETRANSFER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
 
 
 logger = logging.getLogger(__name__)
@@ -95,16 +95,19 @@ def download_url(url: str) -> Optional[str]:
     Return the download URL (AKA `direct_link') as a str or None if the URL
     could not be parsed.
     """
-    logger.debug(f'Getting download URL of {url}')
+    logger.debug(f"Getting download URL of {url}")
     # Follow the redirect if we have a short URL
-    if url.startswith('https://we.tl/'):
-        r = requests.head(url, allow_redirects=True,
-                          headers={'User-Agent': WETRANSFER_USER_AGENT})
-        logger.debug(f'Short URL {url} redirects to {r.url}')
+    if url.startswith("https://we.tl/"):
+        r = requests.head(
+            url,
+            allow_redirects=True,
+            headers={"User-Agent": WETRANSFER_USER_AGENT},
+        )
+        logger.debug(f"Short URL {url} redirects to {r.url}")
         url = r.url
 
     recipient_id = None
-    params = urllib.parse.urlparse(url).path.split('/')[2:]
+    params = urllib.parse.urlparse(url).path.split("/")[2:]
 
     if len(params) == 2:
         transfer_id, security_hash = params
@@ -113,7 +116,7 @@ def download_url(url: str) -> Optional[str]:
     else:
         return None
 
-    logger.debug(f'Getting direct_link of {url}')
+    logger.debug(f"Getting direct_link of {url}")
     j = {
         "intent": "entire_transfer",
         "security_hash": security_hash,
@@ -122,13 +125,12 @@ def download_url(url: str) -> Optional[str]:
         j["recipient_id"] = recipient_id
     s = _prepare_session()
     if not s:
-        raise ConnectionError('Could not prepare session')
-    r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id),
-               json=j)
+        raise ConnectionError("Could not prepare session")
+    r = s.post(WETRANSFER_DOWNLOAD_URL.format(transfer_id=transfer_id), json=j)
     _close_session(s)
 
     j = r.json()
-    return j.get('direct_link')
+    return j.get("direct_link")
 
 
 def _file_unquote(file: str) -> str:
@@ -137,10 +139,15 @@ def _file_unquote(file: str) -> str:
     All occurences of `\', `/' and `../' will be ignored to avoid possible
     directory traversals.
     """
-    return urllib.parse.unquote(file).replace('../', '').replace('/', '').replace('\\', '')
+    return (
+        urllib.parse.unquote(file)
+        .replace("../", "")
+        .replace("/", "")
+        .replace("\\", "")
+    )
 
 
-def download(url: str, file: str = '') -> None:
+def download(url: str, file: str = "") -> None:
     """Given a `we.tl/' or `wetransfer.com/downloads/' download it.
 
     First a direct link is retrieved (via download_url()), the filename can be
@@ -148,18 +155,19 @@ def download(url: str, file: str = '') -> None:
     will be extracted to it and it will be fetched and stored on the current
     working directory.
     """
-    logger.debug(f'Downloading {url}')
+    logger.debug(f"Downloading {url}")
     dl_url = download_url(url)
     if not dl_url:
-        logger.error(f'Could not find direct link of {url}')
+        logger.error(f"Could not find direct link of {url}")
         return None
     if not file:
-        file = _file_unquote(urllib.parse.urlparse(dl_url).path.split('/')[-1])
+        file = _file_unquote(urllib.parse.urlparse(dl_url).path.split("/")[-1])
 
-    logger.debug(f'Fetching {dl_url}')
-    r = requests.get(dl_url, headers={'User-Agent': WETRANSFER_USER_AGENT},
-                     stream=True)
-    with open(file, 'wb') as f:
+    logger.debug(f"Fetching {dl_url}")
+    r = requests.get(
+        dl_url, headers={"User-Agent": WETRANSFER_USER_AGENT}, stream=True
+    )
+    with open(file, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024):
             f.write(chunk)
 
@@ -172,11 +180,7 @@ def _file_name_and_size(file: str) -> dict:
     filename = os.path.basename(file)
     filesize = os.path.getsize(file)
 
-    return {
-        "item_type": "file",
-        "name": filename,
-        "size": filesize
-    }
+    return {"item_type": "file", "name": filename, "size": filesize}
 
 
 def _prepare_session() -> Optional[requests.Session]:
@@ -187,16 +191,18 @@ def _prepare_session() -> Optional[requests.Session]:
     requests.
     """
     s = requests.Session()
-    s.headers.update({'User-Agent': WETRANSFER_USER_AGENT})
-    r = s.get('https://wetransfer.com/')
+    s.headers.update({"User-Agent": WETRANSFER_USER_AGENT})
+    r = s.get("https://wetransfer.com/")
     m = re.search('name="csrf-token" content="([^"]+)"', r.text)
     if not m:
-        logger.error(f'Could not find any csrf-token')
+        logger.error(f"Could not find any csrf-token")
         return None
-    s.headers.update({
-        'x-csrf-token': m.group(1),
-        'x-requested-with': 'XMLHttpRequest',
-    })
+    s.headers.update(
+        {
+            "x-csrf-token": m.group(1),
+            "x-requested-with": "XMLHttpRequest",
+        }
+    )
 
     return s
 
@@ -209,9 +215,14 @@ def _close_session(s: requests.Session) -> None:
     s.close()
 
 
-def _prepare_email_upload(filenames: List[str], display_name: str, message: str,
-                          sender: str, recipients: List[str],
-                          session: requests.Session) -> dict:
+def _prepare_email_upload(
+    filenames: List[str],
+    display_name: str,
+    message: str,
+    sender: str,
+    recipients: List[str],
+    session: requests.Session,
+) -> dict:
     """Given a list of filenames, message a sender and recipients prepare for
     the email upload.
 
@@ -235,20 +246,25 @@ def _verify_email_upload(transfer_id: str, session: requests.Session) -> dict:
 
     Return the parsed JSON response.
     """
-    code = input('Code:')
+    code = input("Code:")
 
     j = {
         "code": code,
         "expire_in": WETRANSFER_EXPIRE_IN,
     }
 
-    r = session.post(WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id),
-                     json=j)
+    r = session.post(
+        WETRANSFER_VERIFY_URL.format(transfer_id=transfer_id), json=j
+    )
     return r.json()
 
 
-def _prepare_link_upload(filenames: List[str], display_name: str, message: str,
-                         session: requests.Session) -> dict:
+def _prepare_link_upload(
+    filenames: List[str],
+    display_name: str,
+    message: str,
+    session: requests.Session,
+) -> dict:
     """Given a list of filenames and a message prepare for the link upload.
 
     Return the parsed JSON response.
@@ -273,11 +289,7 @@ def _storm_preflight_item(file: str) -> dict:
     filesize = os.path.getsize(file)
 
     return {
-        "blocks": [
-            {
-                "content_length": filesize
-            }
-        ],
+        "blocks": [{"content_length": filesize}],
         "item_type": "file",
         "path": filename,
     }
@@ -291,17 +303,22 @@ def _storm_preflight(authorization: str, filenames: List[str]) -> dict:
     j = {
         "items": [_storm_preflight_item(f) for f in filenames],
     }
-    requests.options(WETRANSFER_STORM_PREFLIGHT,
-                     headers={
-                         'Origin': 'https://wetransfer.com',
-                         'Access-Control-Request-Method': 'POST',
-                         'User-Agent': WETRANSFER_USER_AGENT,
-                     })
-    r = requests.post(WETRANSFER_STORM_PREFLIGHT, json=j,
-                      headers={
-                          'Authorization': f'Bearer {authorization}',
-                          'User-Agent': WETRANSFER_USER_AGENT,
-                      })
+    requests.options(
+        WETRANSFER_STORM_PREFLIGHT,
+        headers={
+            "Origin": "https://wetransfer.com",
+            "Access-Control-Request-Method": "POST",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
+    r = requests.post(
+        WETRANSFER_STORM_PREFLIGHT,
+        json=j,
+        headers={
+            "Authorization": f"Bearer {authorization}",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
     return r.json()
 
 
@@ -311,8 +328,8 @@ def _md5(file: str) -> str:
     Return MD5 digest as str.
     """
     h = hashlib.md5()
-    with open(file, 'rb') as f:
-        for chunk in iter(functools.partial(f.read, 4096), b''):
+    with open(file, "rb") as f:
+        for chunk in iter(functools.partial(f.read, 4096), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -324,10 +341,7 @@ def _storm_prepare_item(file: str) -> dict:
     """
     filesize = os.path.getsize(file)
 
-    return {
-        "content_length": filesize,
-        "content_md5_hex": _md5(file)
-    }
+    return {"content_length": filesize, "content_md5_hex": _md5(file)}
 
 
 def _storm_prepare(authorization: str, filenames: List[str]) -> dict:
@@ -338,18 +352,23 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict:
     j = {
         "blocks": [_storm_prepare_item(f) for f in filenames],
     }
-    requests.options(WETRANSFER_STORM_BLOCK,
-                     headers={
-                         'Origin': 'https://wetransfer.com',
-                         'Access-Control-Request-Method': 'POST',
-                         'User-Agent': WETRANSFER_USER_AGENT,
-                     })
-    r = requests.post(WETRANSFER_STORM_BLOCK, json=j,
-                      headers={
-                          'Authorization': f'Bearer {authorization}',
-                          'Origin': 'https://wetransfer.com',
-                          'User-Agent': WETRANSFER_USER_AGENT,
-                      })
+    requests.options(
+        WETRANSFER_STORM_BLOCK,
+        headers={
+            "Origin": "https://wetransfer.com",
+            "Access-Control-Request-Method": "POST",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
+    r = requests.post(
+        WETRANSFER_STORM_BLOCK,
+        json=j,
+        headers={
+            "Authorization": f"Bearer {authorization}",
+            "Origin": "https://wetransfer.com",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
     return r.json()
 
 
@@ -374,38 +393,49 @@ def _storm_finalize_item(file: str, block_id: str) -> dict:
     }
 
 
-def _storm_finalize(authorization: str, filenames: List[str],
-                    block_ids: List[str]) -> dict:
+def _storm_finalize(
+    authorization: str, filenames: List[str], block_ids: List[str]
+) -> dict:
     """Given an Authorization token, filenames and block ids finalize upload.
 
     Return the parsed JSON response.
     """
     j = {
-        "items": [_storm_finalize_item(f, bid) for f, bid in zip(filenames, block_ids)],
+        "items": [
+            _storm_finalize_item(f, bid)
+            for f, bid in zip(filenames, block_ids)
+        ],
     }
-    requests.options(WETRANSFER_STORM_BATCH,
-                     headers={
-                         'Origin': 'https://wetransfer.com',
-                         'Access-Control-Request-Method': 'POST',
-                         'User-Agent': WETRANSFER_USER_AGENT,
-                     })
+    requests.options(
+        WETRANSFER_STORM_BATCH,
+        headers={
+            "Origin": "https://wetransfer.com",
+            "Access-Control-Request-Method": "POST",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
 
     for i in range(0, 5):
-        r = requests.post(WETRANSFER_STORM_BATCH, json=j,
-                          headers={
-                              'Authorization': f'Bearer {authorization}',
-                              'Origin': 'https://wetransfer.com',
-                              'User-Agent': WETRANSFER_USER_AGENT,
-                          })
+        r = requests.post(
+            WETRANSFER_STORM_BATCH,
+            json=j,
+            headers={
+                "Authorization": f"Bearer {authorization}",
+                "Origin": "https://wetransfer.com",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
         if r.status_code == 200:
             break
         else:
             # HTTP request can have 425 HTTP status code and fails with
             # error_code 'BLOCKS_STILL_EXPECTED'. Retry in that and any
             # non-200 cases.
-            logger.debug(f'Request against {WETRANSFER_STORM_BATCH} returned ' +
-                         f'{r.status_code}, retrying in {2 ** i} seconds')
-            time.sleep(2 ** i)
+            logger.debug(
+                f"Request against {WETRANSFER_STORM_BATCH} returned "
+                + f"{r.status_code}, retrying in {2 ** i} seconds"
+            )
+            time.sleep(2**i)
 
     return r.json()
 
@@ -415,20 +445,27 @@ def _storm_upload(url: str, file: str) -> None:
 
     Does not return anything.
     """
-    requests.options(url,
-                     headers={
-                         'Origin': 'https://wetransfer.com',
-                         'Access-Control-Request-Method': 'PUT',
-                         'User-Agent': WETRANSFER_USER_AGENT,
-                     })
-    with open(file, 'rb') as f:
-        requests.put(url, data=f,
-                     headers={
-                        'Origin': 'https://wetransfer.com',
-                        'Content-MD5': binascii.b2a_base64(binascii.unhexlify(_md5(file)), newline=False),
-                        'X-Uploader': 'storm',
-                        'User-Agent': WETRANSFER_USER_AGENT,
-                     })
+    requests.options(
+        url,
+        headers={
+            "Origin": "https://wetransfer.com",
+            "Access-Control-Request-Method": "PUT",
+            "User-Agent": WETRANSFER_USER_AGENT,
+        },
+    )
+    with open(file, "rb") as f:
+        requests.put(
+            url,
+            data=f,
+            headers={
+                "Origin": "https://wetransfer.com",
+                "Content-MD5": binascii.b2a_base64(
+                    binascii.unhexlify(_md5(file)), newline=False
+                ),
+                "X-Uploader": "storm",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
 
 
 def _finalize_upload(transfer_id: str, session: requests.Session) -> dict:
@@ -439,15 +476,20 @@ def _finalize_upload(transfer_id: str, session: requests.Session) -> dict:
     j = {
         "wants_storm": True,
     }
-    r = session.put(WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id),
-                    json=j)
+    r = session.put(
+        WETRANSFER_FINALIZE_URL.format(transfer_id=transfer_id), json=j
+    )
 
     return r.json()
 
 
-def upload(files: List[str], display_name: str = '', message: str = '',
-           sender: Optional[str] = None,
-           recipients: Optional[List[str]] = []) -> str:
+def upload(
+    files: List[str],
+    display_name: str = "",
+    message: str = "",
+    sender: Optional[str] = None,
+    recipients: Optional[List[str]] = [],
+) -> str:
     """Given a list of files upload them and return the corresponding URL.
 
     Also accepts optional parameters:
@@ -466,50 +508,54 @@ def upload(files: List[str], display_name: str = '', message: str = '',
     """
 
     # Check that all files exists
-    logger.debug(f'Checking that all files exists')
+    logger.debug(f"Checking that all files exists")
     for f in files:
         if not os.path.exists(f):
             raise FileNotFoundError(f)
 
     # Check that there are no duplicates filenames
     # (despite possible different dirname())
-    logger.debug(f'Checking for no duplicate filenames')
+    logger.debug(f"Checking for no duplicate filenames")
     filenames = [os.path.basename(f) for f in files]
     if len(files) != len(set(filenames)):
-        raise FileExistsError('Duplicate filenames')
+        raise FileExistsError("Duplicate filenames")
 
-    logger.debug(f'Preparing to upload')
+    logger.debug(f"Preparing to upload")
     transfer = None
     s = _prepare_session()
     if not s:
-        raise ConnectionError('Could not prepare session')
+        raise ConnectionError("Could not prepare session")
     if sender and recipients:
         # email upload
-        transfer = \
-            _prepare_email_upload(files, display_name, message, sender, recipients, s)
-        transfer = _verify_email_upload(transfer['id'], s)
+        transfer = _prepare_email_upload(
+            files, display_name, message, sender, recipients, s
+        )
+        transfer = _verify_email_upload(transfer["id"], s)
     else:
         # link upload
         transfer = _prepare_link_upload(files, display_name, message, s)
 
     logger.debug(f"Get transfer id {transfer['id']}")
     logger.debug(f"Doing prefligh storm")
-    _storm_preflight(transfer['storm_upload_token'], files)
+    _storm_preflight(transfer["storm_upload_token"], files)
     logger.debug(f"Preparing storm block upload")
-    blocks = _storm_prepare(transfer['storm_upload_token'], files)
-    for f, b in zip(files, blocks['data']['blocks']):
+    blocks = _storm_prepare(transfer["storm_upload_token"], files)
+    for f, b in zip(files, blocks["data"]["blocks"]):
         logger.debug(f"Uploading file {f}")
-        _storm_upload(b['presigned_put_url'], f)
+        _storm_upload(b["presigned_put_url"], f)
     logger.debug(f"Finalizing storm batch upload")
-    _storm_finalize(transfer['storm_upload_token'], files,
-                    [b['block_id'] for b in blocks['data']['blocks']])
+    _storm_finalize(
+        transfer["storm_upload_token"],
+        files,
+        [b["block_id"] for b in blocks["data"]["blocks"]],
+    )
     logger.debug(f"Finalizing upload with transfer id {transfer['id']}")
-    shortened_url = _finalize_upload(transfer['id'], s)['shortened_url']
+    shortened_url = _finalize_upload(transfer["id"], s)["shortened_url"]
     _close_session(s)
     return shortened_url
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from sys import exit
     import argparse
 
@@ -518,42 +564,69 @@ if __name__ == '__main__':
     log.addHandler(logging.StreamHandler())
 
     ap = argparse.ArgumentParser(
-        prog='transferwee',
-        description='Download/upload files via wetransfer.com'
+        prog="transferwee",
+        description="Download/upload files via wetransfer.com",
     )
-    sp = ap.add_subparsers(dest='action', help='action', required=True)
+    sp = ap.add_subparsers(dest="action", help="action", required=True)
 
     # download subcommand
-    dp = sp.add_parser('download', help='download files')
-    dp.add_argument('-g', action='store_true',
-                    help='only print the direct link (without downloading it)')
-    dp.add_argument('-o', type=str, default='', metavar='file',
-                    help='output file to be used')
-    dp.add_argument('-v', action='store_true',
-                    help='get verbose/debug logging')
-    dp.add_argument('url', nargs='+', type=str, metavar='url',
-                    help='URL (we.tl/... or wetransfer.com/downloads/...)')
+    dp = sp.add_parser("download", help="download files")
+    dp.add_argument(
+        "-g",
+        action="store_true",
+        help="only print the direct link (without downloading it)",
+    )
+    dp.add_argument(
+        "-o",
+        type=str,
+        default="",
+        metavar="file",
+        help="output file to be used",
+    )
+    dp.add_argument(
+        "-v", action="store_true", help="get verbose/debug logging"
+    )
+    dp.add_argument(
+        "url",
+        nargs="+",
+        type=str,
+        metavar="url",
+        help="URL (we.tl/... or wetransfer.com/downloads/...)",
+    )
 
     # upload subcommand
-    up = sp.add_parser('upload', help='upload files')
-    up.add_argument('-n', type=str, default='', metavar='display_name',
-                    help='title for the transfer')
-    up.add_argument('-m', type=str, default='', metavar='message',
-                    help='message description for the transfer')
-    up.add_argument('-f', type=str, metavar='from', help='sender email')
-    up.add_argument('-t', nargs='+', type=str, metavar='to',
-                    help='recipient emails')
-    up.add_argument('-v', action='store_true',
-                    help='get verbose/debug logging')
-    up.add_argument('files', nargs='+', type=str, metavar='file',
-                    help='files to upload')
+    up = sp.add_parser("upload", help="upload files")
+    up.add_argument(
+        "-n",
+        type=str,
+        default="",
+        metavar="display_name",
+        help="title for the transfer",
+    )
+    up.add_argument(
+        "-m",
+        type=str,
+        default="",
+        metavar="message",
+        help="message description for the transfer",
+    )
+    up.add_argument("-f", type=str, metavar="from", help="sender email")
+    up.add_argument(
+        "-t", nargs="+", type=str, metavar="to", help="recipient emails"
+    )
+    up.add_argument(
+        "-v", action="store_true", help="get verbose/debug logging"
+    )
+    up.add_argument(
+        "files", nargs="+", type=str, metavar="file", help="files to upload"
+    )
 
     args = ap.parse_args()
 
     if args.v:
         log.setLevel(logging.DEBUG)
 
-    if args.action == 'download':
+    if args.action == "download":
         if args.g:
             for u in args.url:
                 print(download_url(u))
@@ -562,6 +635,6 @@ if __name__ == '__main__':
                 download(u, args.o)
         exit(0)
 
-    if args.action == 'upload':
+    if args.action == "upload":
         print(upload(args.files, args.n, args.m, args.f, args.t))
         exit(0)
