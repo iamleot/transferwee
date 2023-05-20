@@ -1,6 +1,3 @@
-![Check and test transferwee](https://github.com/iamleot/transferwee/workflows/Check%20and%20test%20transferwee/badge.svg)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/iamleot/transferwee.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/iamleot/transferwee/alerts/)
-
 # transferwee
 
 transferwee is a simple Python 3 script to download/upload files via
