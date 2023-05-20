@@ -191,18 +191,19 @@ def _prepare_session() -> Optional[requests.Session]:
     requests.
     """
     s = requests.Session()
-    s.headers.update({"User-Agent": WETRANSFER_USER_AGENT})
-    r = s.get("https://wetransfer.com/")
-    m = re.search('name="csrf-token" content="([^"]+)"', r.text)
-    if not m:
-        logger.error(f"Could not find any csrf-token")
-        return None
     s.headers.update(
         {
-            "x-csrf-token": m.group(1),
+            "User-Agent": WETRANSFER_USER_AGENT,
             "x-requested-with": "XMLHttpRequest",
         }
     )
+    r = s.get("https://wetransfer.com/")
+    m = re.search('name="csrf-token" content="([^"]+)"', r.text)
+    if m:
+        logger.debug(f"Setting x-csrf-token header to {m.group(1)}")
+        s.headers.update({"x-csrf-token": m.group(1)})
+    else:
+        logger.debug(f"Could not find any csrf-token")
 
     return s
 
