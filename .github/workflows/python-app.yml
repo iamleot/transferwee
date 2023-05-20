@@ -58,7 +58,6 @@ jobs:
         PYTHONDEVMODE: 1
         PYTHONTRACEMALLOC: 1
       run: |
-        e=0
         sleep_time=1
         factor=2
         cd tests 
@@ -66,11 +65,10 @@ jobs:
           e=$?
           if [ "${sleep_time}" -gt 64 ]; then
             echo "Tried too much times"
-            break
+            exit $e
           fi
           echo "Tests failed with exit code ${e}"
           echo "Retrying in ${sleep_time}"
           sleep ${sleep_time}
           sleep_time=$((sleep_time * factor))
         done
-        exit $e
