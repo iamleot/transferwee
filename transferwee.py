@@ -537,7 +537,7 @@ def upload(
         transfer = _prepare_link_upload(files, display_name, message, s)
 
     logger.debug(f"Get transfer id {transfer['id']}")
-    logger.debug(f"Doing prefligh storm")
+    logger.debug(f"Doing preflight storm")
     _storm_preflight(transfer["storm_upload_token"], files)
     logger.debug(f"Preparing storm block upload")
     blocks = _storm_prepare(transfer["storm_upload_token"], files)
