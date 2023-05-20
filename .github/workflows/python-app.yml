@@ -51,7 +51,7 @@ jobs:
     - name: Static type checking via mypy
       run: |
         mypy --non-interactive --install-types .
-        mypy .
+        mypy --strict --disable-error-code no-any-return .
     - name: Test transferwee
       shell: bash
       env:
