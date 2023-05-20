@@ -1,0 +1,3 @@
+[tool.black]
+# honor PEP 8
+line-length = 79
