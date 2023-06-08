@@ -42,6 +42,7 @@ from typing import Any, List, Optional, Union
 import binascii
 import functools
 import hashlib
+import json
 import logging
 import os.path
 import re
@@ -57,14 +58,6 @@ WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + "/email"
 WETRANSFER_VERIFY_URL = WETRANSFER_API_URL + "/{transfer_id}/verify"
 WETRANSFER_UPLOAD_LINK_URL = WETRANSFER_API_URL + "/link"
 WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + "/{transfer_id}/finalize"
-
-# XXX: There are probably other region as well (very likely a subset of AWS
-# XXX: regions). A way to find them should be investigated and then the
-# XXX: nearest one should be picked up.
-WETRANSFER_STORM_URL = "https://storm-eu-west-1.wetransfer.net/api/v2"
-WETRANSFER_STORM_PREFLIGHT = WETRANSFER_STORM_URL + "/batch/preflight"
-WETRANSFER_STORM_BLOCK = WETRANSFER_STORM_URL + "/blocks"
-WETRANSFER_STORM_BATCH = WETRANSFER_STORM_URL + "/batch"
 
 WETRANSFER_EXPIRE_IN = 604800
 WETRANSFER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
@@ -283,6 +276,27 @@ def _prepare_link_upload(
     return r.json()
 
 
+def _storm_urls(
+    authorization: str,
+) -> dict[str, str]:
+    """Given an authorization bearer extract storm URLs.
+
+    Return a dict with the various storm URLs.
+
+    XXX: Here we can basically ask/be redirected anywhere. Should we do some
+    XXX: possible sanity check to possibly avoid doing HTTP request to
+    XXX: arbitrary URLs?
+    """
+    # Extract JWT payload and add extra padding to be sure that it can be
+    # base64-decoded.
+    j = json.loads(binascii.a2b_base64(authorization.split(".")[1] + "=="))
+    return {
+        "WETRANSFER_STORM_PREFLIGHT": j.get("storm.preflight_batch_url"),
+        "WETRANSFER_STORM_BLOCK": j.get("storm.announce_blocks_url"),
+        "WETRANSFER_STORM_BATCH": j.get("storm.create_batch_url"),
+    }
+
+
 def _storm_preflight_item(
     file: str,
 ) -> dict[str, Union[List[dict[str, int]], str]]:
@@ -311,7 +325,7 @@ def _storm_preflight(
         "items": [_storm_preflight_item(f) for f in filenames],
     }
     requests.options(
-        WETRANSFER_STORM_PREFLIGHT,
+        _storm_urls(authorization)["WETRANSFER_STORM_PREFLIGHT"],
         headers={
             "Origin": "https://wetransfer.com",
             "Access-Control-Request-Method": "POST",
@@ -319,7 +333,7 @@ def _storm_preflight(
         },
     )
     r = requests.post(
-        WETRANSFER_STORM_PREFLIGHT,
+        _storm_urls(authorization)["WETRANSFER_STORM_PREFLIGHT"],
         json=j,
         headers={
             "Authorization": f"Bearer {authorization}",
@@ -360,7 +374,7 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
         "blocks": [_storm_prepare_item(f) for f in filenames],
     }
     requests.options(
-        WETRANSFER_STORM_BLOCK,
+        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
         headers={
             "Origin": "https://wetransfer.com",
             "Access-Control-Request-Method": "POST",
@@ -368,7 +382,7 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
         },
     )
     r = requests.post(
-        WETRANSFER_STORM_BLOCK,
+        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
         json=j,
         headers={
             "Authorization": f"Bearer {authorization}",
@@ -416,7 +430,7 @@ def _storm_finalize(
         ],
     }
     requests.options(
-        WETRANSFER_STORM_BATCH,
+        _storm_urls(authorization)["WETRANSFER_STORM_BATCH"],
         headers={
             "Origin": "https://wetransfer.com",
             "Access-Control-Request-Method": "POST",
@@ -426,7 +440,7 @@ def _storm_finalize(
 
     for i in range(0, 5):
         r = requests.post(
-            WETRANSFER_STORM_BATCH,
+            _storm_urls(authorization)["WETRANSFER_STORM_BATCH"],
             json=j,
             headers={
                 "Authorization": f"Bearer {authorization}",
@@ -441,8 +455,9 @@ def _storm_finalize(
             # error_code 'BLOCKS_STILL_EXPECTED'. Retry in that and any
             # non-200 cases.
             logger.debug(
-                f"Request against {WETRANSFER_STORM_BATCH} returned "
-                + f"{r.status_code}, retrying in {2 ** i} seconds"
+                f"Request against "
+                + f"{_storm_urls(authorization)['WETRANSFER_STORM_BATCH']} "
+                + f"returned {r.status_code}, retrying in {2 ** i} seconds"
             )
             time.sleep(2**i)
 
@@ -546,6 +561,24 @@ def upload(
         # link upload
         transfer = _prepare_link_upload(files, display_name, message, s)
 
+    logger.debug(
+        "From storm_upload_token WETRANSFER_STORM_PREFLIGHT URL is: "
+        + _storm_urls(transfer["storm_upload_token"])[
+            "WETRANSFER_STORM_PREFLIGHT"
+        ],
+    )
+    logger.debug(
+        "From storm_upload_token WETRANSFER_STORM_BLOCK URL is: "
+        + _storm_urls(transfer["storm_upload_token"])[
+            "WETRANSFER_STORM_BLOCK"
+        ],
+    )
+    logger.debug(
+        "From storm_upload_token WETRANSFER_STORM_BLOCK URL is: "
+        + _storm_urls(transfer["storm_upload_token"])[
+            "WETRANSFER_STORM_BATCH"
+        ],
+    )
     logger.debug(f"Get transfer id {transfer['id']}")
     logger.debug(f"Doing preflight storm")
     _storm_preflight(transfer["storm_upload_token"], files)
