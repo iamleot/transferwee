@@ -36,9 +36,6 @@ jobs:
         pip install flake8
         pip install mypy
         pip install requests
-    - name: Install Tor
-      run: |
-        sudo apt-get install tor
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -61,7 +58,7 @@ jobs:
         sleep_time=1
         factor=2
         cd tests 
-        until torify ./check.sh ; do
+        until ./check.sh ; do
           e=$?
           if [ "${sleep_time}" -gt 64 ]; then
             echo "Tried too much times"
