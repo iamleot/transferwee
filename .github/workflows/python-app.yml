@@ -1,6 +1,6 @@
 name: Check and test transferwee
 
-on:
+'on':
   push:
     branches:
       - master
