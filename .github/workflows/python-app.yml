@@ -57,7 +57,7 @@ jobs:
         run: |
           sleep_time=1
           factor=2
-          cd tests 
+          cd tests
           until ./check.sh ; do
             e=$?
             if [ "${sleep_time}" -gt 64 ]; then
