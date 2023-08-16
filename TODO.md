@@ -11,5 +11,5 @@ and possible TODOs:
 
 ## Possible TODOs
 
-- Add a `-d dir` option to specify a base directory for upload/download? 
+- Add a `-d dir` option to specify a base directory for upload/download?
 - Convert `tests/check.sh` in pure Python code?
