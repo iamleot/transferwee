@@ -1,0 +1,22 @@
+name: Check Markdown formatting via mdformat
+
+'on':
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  mdformat:
+    name: Check Markdown formatting via mdformat
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install mdformat
+        run: |
+          pip install mdformat
+      - name: Check Markdown formatting via mdformat
+        run: |
+          mdformat --check .
