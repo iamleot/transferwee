@@ -8,6 +8,8 @@ and possible TODOs:
   files are always overwritten.
 - Write a `setup.py`
 - Add SIGINFO/SIGUSR1 handlers to print the status of the upload/download
+- Add an `ads` or similar subcommand in order to show one or more ads that are
+  showed during file uploads
 
 ## Possible TODOs
 
