@@ -1,0 +1,27 @@
+name: Package transferwee with Pyinstaller
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  buildexe:
+    name: Build transferwee.exe
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Package transferwee
+      uses: JackMcKew/pyinstaller-action-windows@main
+      with:
+        path: .
+
+    - name: Upload transferwee.exe artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: transferwee
+        path: ./dist/windows
