@@ -1,4 +1,4 @@
-name: Check and test transferwee
+name: Check and test transferwee with Python 3.10
 
 'on':
   push:
@@ -10,7 +10,7 @@ name: Check and test transferwee
 
 jobs:
   build:
-    name: Check and test transferwee
+    name: Check and test transferwee with Python 3.10
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
