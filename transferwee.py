@@ -354,13 +354,21 @@ def _md5(file: str) -> str:
             h.update(chunk)
     return h.hexdigest()
 
+
 def _storm_prepare_item(file: str) -> Dict[str, List[Union[int, str]]]:
     """Given a file, prepare the block for blocks dictionary.
 
     Return a dictionary with "content_length" and "content_md5_hex" keys.
     """
     with open(file, "rb") as f:
-        return [{"content_length": len(chunk), "content_md5_hex": hashlib.md5(chunk).hexdigest()} for chunk in iter(functools.partial(f.read, MAX_BLOCK_SIZE), b"")]
+        return [
+            {
+                "content_length": len(chunk),
+                "content_md5_hex": hashlib.md5(chunk).hexdigest(),
+            }
+            for chunk in iter(functools.partial(f.read, MAX_BLOCK_SIZE), b"")
+        ]
+
 
 def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
     """Given an Authorization token and filenames prepare for block uploads.
@@ -388,7 +396,7 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
             "User-Agent": WETRANSFER_USER_AGENT,
         },
     )
-    return { "files_bids": files_bids, "blocks":r.json() }
+    return {"files_bids": files_bids, "blocks": r.json()}
 
 
 def _storm_finalize_item(
@@ -461,7 +469,15 @@ def _storm_upload(urls: List[str], file: str) -> None:
     Does not return anything.
     """
     with open(file, "rb") as f:
-        for url, chunk in zip(urls,[chunk for chunk in iter(functools.partial(f.read, MAX_BLOCK_SIZE), b"")]):
+        for url, chunk in zip(
+            urls,
+            [
+                chunk
+                for chunk in iter(
+                    functools.partial(f.read, MAX_BLOCK_SIZE), b""
+                )
+            ],
+        ):
             requests.options(
                 url,
                 headers={
@@ -476,7 +492,8 @@ def _storm_upload(urls: List[str], file: str) -> None:
                 headers={
                     "Origin": "https://wetransfer.com",
                     "Content-MD5": binascii.b2a_base64(
-                        binascii.unhexlify(hashlib.md5(chunk).hexdigest()), newline=False
+                        binascii.unhexlify(hashlib.md5(chunk).hexdigest()),
+                        newline=False,
                     ),
                     "X-Uploader": "storm",
                     "User-Agent": WETRANSFER_USER_AGENT,
@@ -583,7 +600,9 @@ def upload(
     for f in files:
         logger.debug(f"Uploading file {f}")
         file_chunks_count = len(prepare_data["files_bids"][file_index])
-        file_blocks = blocks[start_block_index:start_block_index+file_chunks_count]
+        file_blocks = blocks[
+            start_block_index : start_block_index + file_chunks_count
+        ]
         file_bids.append(file_blocks)
         _storm_upload([b["presigned_put_url"] for b in file_blocks], f)
         start_block_index += file_chunks_count
