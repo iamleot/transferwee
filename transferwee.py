@@ -355,7 +355,7 @@ def _md5(file: str) -> str:
     return h.hexdigest()
 
 
-def _storm_prepare_item(file: str) -> Dict[str, List[Union[int, str]]]:
+def _storm_prepare_item(file: str) -> List[Dict[str, Any]]:
     """Given a file, prepare the block for blocks dictionary.
 
     Return a dictionary with "content_length" and "content_md5_hex" keys.
