@@ -370,9 +370,6 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
 
     Return the parsed JSON response.
     """
-    j = {
-        "blocks": [_storm_prepare_item(f) for f in filenames],
-    }
     requests.options(
         _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
         headers={
