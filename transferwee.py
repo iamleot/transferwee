@@ -38,7 +38,7 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-from typing import Any, List, Optional, Union, Dict
+from typing import Any, List, Optional, Union, Dict, cast
 import binascii
 import functools
 import hashlib
@@ -378,7 +378,10 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
     files_bids = [_storm_prepare_item(f) for f in filenames]
 
     blocks = [i for sublist in files_bids for i in sublist]
-    response = {"ok": True, "data": {"blocks": []}}
+    response: Dict[str, Union[bool, Dict[str, List[Any]]]] = {
+        "ok": True,
+        "data": {"blocks": []},
+    }
     chunk_size = 100
     for i in range(0, len(blocks), chunk_size):
         j = {
@@ -406,7 +409,9 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
         if not r_json["ok"]:
             logger.error(r_json)
         response["ok"] = response["ok"] and r_json["ok"]
-        response["data"]["blocks"] += r_json["data"]["blocks"]
+        cast(Dict[str, List[Any]], response["data"])["blocks"] += cast(
+            Dict[str, List[Any]], r_json["data"]
+        )["blocks"]
 
     return {"files_bids": files_bids, "blocks": response}
 
