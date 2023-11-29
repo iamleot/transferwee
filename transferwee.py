@@ -61,7 +61,7 @@ WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + "/{transfer_id}/finalize"
 
 WETRANSFER_EXPIRE_IN = 604800
 WETRANSFER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-MAX_BLOCK_SIZE = 2 * 1024 * 1024
+MAX_BLOCK_SIZE = 10 * 1024 * 1024
 
 logger = logging.getLogger(__name__)
 
