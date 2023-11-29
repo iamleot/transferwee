@@ -376,27 +376,39 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
     Return the parsed JSON response.
     """
     files_bids = [_storm_prepare_item(f) for f in filenames]
-    j = {
-        "blocks": [i for sublist in files_bids for i in sublist],
-    }
-    requests.options(
-        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
-        headers={
-            "Origin": "https://wetransfer.com",
-            "Access-Control-Request-Method": "POST",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
-    r = requests.post(
-        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
-        json=j,
-        headers={
-            "Authorization": f"Bearer {authorization}",
-            "Origin": "https://wetransfer.com",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
-    return {"files_bids": files_bids, "blocks": r.json()}
+
+    blocks = [i for sublist in files_bids for i in sublist]
+    response = {"ok": True, "data": {"blocks": []}}
+    chunk_size = 100
+    for i in range(0, len(blocks), chunk_size):
+        j = {
+            "blocks": blocks[i : i + chunk_size],
+        }
+        requests.options(
+            _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
+            headers={
+                "Origin": "https://wetransfer.com",
+                "Access-Control-Request-Method": "POST",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
+        r = requests.post(
+            _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
+            json=j,
+            headers={
+                "Authorization": f"Bearer {authorization}",
+                "Origin": "https://wetransfer.com",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
+
+        r_json = r.json()
+        if not r_json["ok"]:
+            logger.error(r_json)
+        response["ok"] = response["ok"] and r_json["ok"]
+        response["data"]["blocks"] += r_json["data"]["blocks"]
+
+    return {"files_bids": files_bids, "blocks": response}
 
 
 def _storm_finalize_item(
