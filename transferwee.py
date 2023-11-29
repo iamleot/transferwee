@@ -614,7 +614,10 @@ def upload(
         [[b["block_id"] for b in f] for f in file_bids],
     )
     logger.debug(f"Finalizing upload with transfer id {transfer['id']}")
-    shortened_url = _finalize_upload(transfer["id"], s)["shortened_url"]
+    finalize_json = _finalize_upload(transfer["id"], s)
+    if not ("shortened_url" in finalize_json):
+        logger.error(finalize_json)
+    shortened_url = finalize_json["shortened_url"]
     _close_session(s)
     return shortened_url
 
