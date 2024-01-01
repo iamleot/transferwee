@@ -38,7 +38,7 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import binascii
 import functools
 import hashlib
@@ -167,7 +167,7 @@ def download(url: str, file: str = "") -> None:
             f.write(chunk)
 
 
-def _file_name_and_size(file: str) -> dict[str, Union[int, str]]:
+def _file_name_and_size(file: str) -> Dict[str, Union[int, str]]:
     """Given a file, prepare the "item_type", "name" and "size" dictionary.
 
     Return a dictionary with "item_type", "name" and "size" keys.
@@ -218,7 +218,7 @@ def _prepare_email_upload(
     sender: str,
     recipients: List[str],
     session: requests.Session,
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given a list of filenames, message a sender and recipients prepare for
     the email upload.
 
@@ -239,7 +239,7 @@ def _prepare_email_upload(
 
 def _verify_email_upload(
     transfer_id: str, session: requests.Session
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given a transfer_id, read the code from standard input.
 
     Return the parsed JSON response.
@@ -262,7 +262,7 @@ def _prepare_link_upload(
     display_name: str,
     message: str,
     session: requests.Session,
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given a list of filenames and a message prepare for the link upload.
 
     Return the parsed JSON response.
@@ -280,7 +280,7 @@ def _prepare_link_upload(
 
 def _storm_urls(
     authorization: str,
-) -> dict[str, str]:
+) -> Dict[str, str]:
     """Given an authorization bearer extract storm URLs.
 
     Return a dict with the various storm URLs.
@@ -301,7 +301,7 @@ def _storm_urls(
 
 def _storm_preflight_item(
     file: str,
-) -> dict[str, Union[List[dict[str, int]], str]]:
+) -> Dict[str, Union[List[Dict[str, int]], str]]:
     """Given a file, prepare the item block dictionary.
 
     Return a dictionary with "blocks", "item_type" and "path" keys.
@@ -318,7 +318,7 @@ def _storm_preflight_item(
 
 def _storm_preflight(
     authorization: str, filenames: List[str]
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given an Authorization token and filenames do preflight for upload.
 
     Return the parsed JSON response.
@@ -357,7 +357,7 @@ def _md5(file: str) -> str:
     return h.hexdigest()
 
 
-def _storm_prepare_item(file: str) -> dict[str, Union[int, str]]:
+def _storm_prepare_item(file: str) -> Dict[str, Union[int, str]]:
     """Given a file, prepare the block for blocks dictionary.
 
     Return a dictionary with "content_length" and "content_md5_hex" keys.
@@ -367,7 +367,7 @@ def _storm_prepare_item(file: str) -> dict[str, Union[int, str]]:
     return {"content_length": filesize, "content_md5_hex": _md5(file)}
 
 
-def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
+def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
     """Given an Authorization token and filenames prepare for block uploads.
 
     Return the parsed JSON response.
@@ -397,7 +397,7 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> dict[Any, Any]:
 
 def _storm_finalize_item(
     file: str, block_id: str
-) -> dict[str, Union[List[str], str]]:
+) -> Dict[str, Union[List[str], str]]:
     """Given a file and block_id prepare the item block dictionary.
 
     Return a dictionary with "block_ids", "item_type" and "path" keys.
@@ -420,7 +420,7 @@ def _storm_finalize_item(
 
 def _storm_finalize(
     authorization: str, filenames: List[str], block_ids: List[str]
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given an Authorization token, filenames and block ids finalize upload.
 
     Return the parsed JSON response.
@@ -496,7 +496,7 @@ def _storm_upload(url: str, file: str) -> None:
 
 def _finalize_upload(
     transfer_id: str, session: requests.Session
-) -> dict[Any, Any]:
+) -> Dict[Any, Any]:
     """Given a transfer_id finalize the upload.
 
     Return the parsed JSON response.
