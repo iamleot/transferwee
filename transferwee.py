@@ -196,7 +196,7 @@ def _prepare_session() -> Optional[requests.Session]:
         logger.debug(f"Setting x-csrf-token header to {m.group(1)}")
         s.headers.update({"x-csrf-token": m.group(1)})
     else:
-        logger.debug(f"Could not find any csrf-token")
+        logger.debug("Could not find any csrf-token")
 
     return s
 
@@ -455,7 +455,7 @@ def _storm_finalize(
             # error_code 'BLOCKS_STILL_EXPECTED'. Retry in that and any
             # non-200 cases.
             logger.debug(
-                f"Request against "
+                "Request against "
                 + f"{_storm_urls(authorization)['WETRANSFER_STORM_BATCH']} "
                 + f"returned {r.status_code}, retrying in {2 ** i} seconds"
             )
@@ -534,19 +534,19 @@ def upload(
     """
 
     # Check that all files exists
-    logger.debug(f"Checking that all files exists")
+    logger.debug("Checking that all files exists")
     for f in files:
         if not os.path.exists(f):
             raise FileNotFoundError(f)
 
     # Check that there are no duplicates filenames
     # (despite possible different dirname())
-    logger.debug(f"Checking for no duplicate filenames")
+    logger.debug("Checking for no duplicate filenames")
     filenames = [os.path.basename(f) for f in files]
     if len(files) != len(set(filenames)):
         raise FileExistsError("Duplicate filenames")
 
-    logger.debug(f"Preparing to upload")
+    logger.debug("Preparing to upload")
     transfer = None
     s = _prepare_session()
     if not s:
@@ -580,14 +580,14 @@ def upload(
         ],
     )
     logger.debug(f"Get transfer id {transfer['id']}")
-    logger.debug(f"Doing preflight storm")
+    logger.debug("Doing preflight storm")
     _storm_preflight(transfer["storm_upload_token"], files)
-    logger.debug(f"Preparing storm block upload")
+    logger.debug("Preparing storm block upload")
     blocks = _storm_prepare(transfer["storm_upload_token"], files)
     for f, b in zip(files, blocks["data"]["blocks"]):
         logger.debug(f"Uploading file {f}")
         _storm_upload(b["presigned_put_url"], f)
-    logger.debug(f"Finalizing storm batch upload")
+    logger.debug("Finalizing storm batch upload")
     _storm_finalize(
         transfer["storm_upload_token"],
         files,
