@@ -90,7 +90,9 @@ def download_url(url: str) -> Optional[str]:
     """
     logger.debug(f"Getting download URL of {url}")
     # Follow the redirect if we have a short URL
-    if url.startswith("https://we.tl/"):
+    if url.startswith("https://we.tl/") or url.startswith(
+        "https://go.wetransfer.com/"
+    ):
         r = requests.head(
             url,
             allow_redirects=True,
