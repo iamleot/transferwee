@@ -38,7 +38,7 @@ files from a `we.tl' or `wetransfer.com/downloads' URLs and upload files that
 will be shared via emails or link.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union, Dict, cast
 import binascii
 import functools
 import hashlib
@@ -61,7 +61,7 @@ WETRANSFER_FINALIZE_URL = WETRANSFER_API_URL + "/{transfer_id}/finalize"
 
 WETRANSFER_EXPIRE_IN = 604800
 WETRANSFER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0"
-
+MAX_BLOCK_SIZE = 10 * 1024 * 1024
 
 logger = logging.getLogger(__name__)
 
@@ -355,14 +355,19 @@ def _md5(file: str) -> str:
     return h.hexdigest()
 
 
-def _storm_prepare_item(file: str) -> Dict[str, Union[int, str]]:
+def _storm_prepare_item(file: str) -> List[Dict[str, Any]]:
     """Given a file, prepare the block for blocks dictionary.
 
     Return a dictionary with "content_length" and "content_md5_hex" keys.
     """
-    filesize = os.path.getsize(file)
-
-    return {"content_length": filesize, "content_md5_hex": _md5(file)}
+    with open(file, "rb") as f:
+        return [
+            {
+                "content_length": len(chunk),
+                "content_md5_hex": hashlib.md5(chunk).hexdigest(),
+            }
+            for chunk in iter(functools.partial(f.read, MAX_BLOCK_SIZE), b"")
+        ]
 
 
 def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
@@ -370,54 +375,65 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
 
     Return the parsed JSON response.
     """
-    j = {
-        "blocks": [_storm_prepare_item(f) for f in filenames],
+    files_bids = [_storm_prepare_item(f) for f in filenames]
+
+    blocks = [i for sublist in files_bids for i in sublist]
+    response: Dict[str, Union[bool, Dict[str, List[Any]]]] = {
+        "ok": True,
+        "data": {"blocks": []},
     }
-    requests.options(
-        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
-        headers={
-            "Origin": "https://wetransfer.com",
-            "Access-Control-Request-Method": "POST",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
-    r = requests.post(
-        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
-        json=j,
-        headers={
-            "Authorization": f"Bearer {authorization}",
-            "Origin": "https://wetransfer.com",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
-    return r.json()
+    chunk_size = 100
+    for i in range(0, len(blocks), chunk_size):
+        j = {
+            "blocks": blocks[i : i + chunk_size],
+        }
+        requests.options(
+            _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
+            headers={
+                "Origin": "https://wetransfer.com",
+                "Access-Control-Request-Method": "POST",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
+        r = requests.post(
+            _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
+            json=j,
+            headers={
+                "Authorization": f"Bearer {authorization}",
+                "Origin": "https://wetransfer.com",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
+
+        r_json = r.json()
+        if not r_json["ok"]:
+            logger.error(r_json)
+        response["ok"] = response["ok"] and r_json["ok"]
+        cast(Dict[str, List[Any]], response["data"])["blocks"] += cast(
+            Dict[str, List[Any]], r_json["data"]
+        )["blocks"]
+
+    return {"files_bids": files_bids, "blocks": response}
 
 
 def _storm_finalize_item(
-    file: str, block_id: str
+    file: str, block_ids: List[str]
 ) -> Dict[str, Union[List[str], str]]:
     """Given a file and block_id prepare the item block dictionary.
 
     Return a dictionary with "block_ids", "item_type" and "path" keys.
-
-    XXX: Is it possible to actually have more than one block?
-    XXX: If yes this - and probably other parts of the code involved with
-    XXX: blocks - needs to be instructed to handle them instead of
-    XXX: assuming that one file is associated with one block.
     """
     filename = os.path.basename(file)
 
     return {
-        "block_ids": [
-            block_id,
-        ],
+        "block_ids": block_ids,
         "item_type": "file",
         "path": filename,
     }
 
 
 def _storm_finalize(
-    authorization: str, filenames: List[str], block_ids: List[str]
+    authorization: str, filenames: List[str], block_ids: List[List[str]]
 ) -> Dict[Any, Any]:
     """Given an Authorization token, filenames and block ids finalize upload.
 
@@ -425,8 +441,8 @@ def _storm_finalize(
     """
     j = {
         "items": [
-            _storm_finalize_item(f, bid)
-            for f, bid in zip(filenames, block_ids)
+            _storm_finalize_item(f, bids)
+            for f, bids in zip(filenames, block_ids)
         ],
     }
     requests.options(
@@ -464,32 +480,42 @@ def _storm_finalize(
     return r.json()
 
 
-def _storm_upload(url: str, file: str) -> None:
+def _storm_upload(urls: List[str], file: str) -> None:
     """Given an url and file upload it.
 
     Does not return anything.
     """
-    requests.options(
-        url,
-        headers={
-            "Origin": "https://wetransfer.com",
-            "Access-Control-Request-Method": "PUT",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
     with open(file, "rb") as f:
-        requests.put(
-            url,
-            data=f,
-            headers={
-                "Origin": "https://wetransfer.com",
-                "Content-MD5": binascii.b2a_base64(
-                    binascii.unhexlify(_md5(file)), newline=False
-                ),
-                "X-Uploader": "storm",
-                "User-Agent": WETRANSFER_USER_AGENT,
-            },
-        )
+        for url, chunk in zip(
+            urls,
+            [
+                chunk
+                for chunk in iter(
+                    functools.partial(f.read, MAX_BLOCK_SIZE), b""
+                )
+            ],
+        ):
+            requests.options(
+                url,
+                headers={
+                    "Origin": "https://wetransfer.com",
+                    "Access-Control-Request-Method": "PUT",
+                    "User-Agent": WETRANSFER_USER_AGENT,
+                },
+            )
+            requests.put(
+                url,
+                data=chunk,
+                headers={
+                    "Origin": "https://wetransfer.com",
+                    "Content-MD5": binascii.b2a_base64(
+                        binascii.unhexlify(hashlib.md5(chunk).hexdigest()),
+                        newline=False,
+                    ),
+                    "X-Uploader": "storm",
+                    "User-Agent": WETRANSFER_USER_AGENT,
+                },
+            )
 
 
 def _finalize_upload(
@@ -582,19 +608,33 @@ def upload(
     logger.debug(f"Get transfer id {transfer['id']}")
     logger.debug("Doing preflight storm")
     _storm_preflight(transfer["storm_upload_token"], files)
-    logger.debug("Preparing storm block upload")
-    blocks = _storm_prepare(transfer["storm_upload_token"], files)
-    for f, b in zip(files, blocks["data"]["blocks"]):
+    logger.debug(f"Preparing storm block upload")
+    prepare_data = _storm_prepare(transfer["storm_upload_token"], files)
+    blocks = prepare_data["blocks"]["data"]["blocks"]
+    start_block_index = 0
+    file_index = 0
+    file_bids = []
+    for f in files:
         logger.debug(f"Uploading file {f}")
-        _storm_upload(b["presigned_put_url"], f)
-    logger.debug("Finalizing storm batch upload")
+        file_chunks_count = len(prepare_data["files_bids"][file_index])
+        file_blocks = blocks[
+            start_block_index : start_block_index + file_chunks_count
+        ]
+        file_bids.append(file_blocks)
+        _storm_upload([b["presigned_put_url"] for b in file_blocks], f)
+        start_block_index += file_chunks_count
+        file_index += 1
+    logger.debug(f"Finalizing storm batch upload")
     _storm_finalize(
         transfer["storm_upload_token"],
         files,
-        [b["block_id"] for b in blocks["data"]["blocks"]],
+        [[b["block_id"] for b in f] for f in file_bids],
     )
     logger.debug(f"Finalizing upload with transfer id {transfer['id']}")
-    shortened_url = _finalize_upload(transfer["id"], s)["shortened_url"]
+    finalize_json = _finalize_upload(transfer["id"], s)
+    if not ("shortened_url" in finalize_json):
+        logger.error(finalize_json)
+    shortened_url = finalize_json["shortened_url"]
     _close_session(s)
     return shortened_url
 
