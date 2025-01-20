@@ -41,6 +41,7 @@ will be shared via emails or link.
 from typing import Any, Dict, List, Optional, Union
 import binascii
 import functools
+import getpass
 import hashlib
 import json
 import logging
@@ -66,7 +67,7 @@ WETRANSFER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gec
 logger = logging.getLogger(__name__)
 
 
-def download_url(url: str) -> Optional[str]:
+def download_url(url: str, password: Optional[str] = None) -> Optional[str]:
     """Given a wetransfer.com download URL download return the downloadable URL.
 
     The URL should be of the form `https://we.tl/' or
@@ -84,6 +85,9 @@ def download_url(url: str) -> Optional[str]:
      - `https://wetransfer.com/<transfer_id>/<recipient_id>/<security_hash>`:
         received via email by recipients when the files are shared via email
         upload
+
+    If transfer is password-protected, the password should be provided via the
+    optional `password` argument.
 
     Return the download URL (AKA `direct_link') as a str or None if the URL
     could not be parsed.
@@ -114,6 +118,11 @@ def download_url(url: str) -> Optional[str]:
         "intent": "entire_transfer",
         "security_hash": security_hash,
     }
+    if password:
+        j = {
+            **j,
+            "password": password,
+        }
     if recipient_id:
         j["recipient_id"] = recipient_id
     s = _prepare_session()
@@ -123,6 +132,14 @@ def download_url(url: str) -> Optional[str]:
     _close_session(s)
 
     j = r.json()
+    if "message" in j and j["message"] == "invalid_transfer_password":
+        if password:
+            logger.error("The provided password is incorrect")
+        else:
+            logger.error(
+                "The file is password-protected but the password hasn't been provided"
+            )
+        return None
     return j.get("direct_link")
 
 
@@ -140,8 +157,11 @@ def _file_unquote(file: str) -> str:
     )
 
 
-def download(url: str, file: str = "") -> None:
+def download(url: str, password: Optional[str] = None, file: str = "") -> None:
     """Given a `we.tl/' or `wetransfer.com/downloads/' download it.
+
+    If transfer is password-protected, the password should be provided via the
+    optional `password` argument.
 
     First a direct link is retrieved (via download_url()), the filename can be
     provided via the optional `file' argument. If not provided the filename
@@ -149,7 +169,7 @@ def download(url: str, file: str = "") -> None:
     working directory.
     """
     logger.debug(f"Downloading {url}")
-    dl_url = download_url(url)
+    dl_url = download_url(url, password)
     if not dl_url:
         logger.error(f"Could not find direct link of {url}")
         return None
@@ -621,6 +641,11 @@ if __name__ == "__main__":
         help="only print the direct link (without downloading it)",
     )
     dp.add_argument(
+        "-p",
+        action="store_true",
+        help="If the WETRANSFER_PASSORD env variable exists, read the transfer password from it. Otherwise, ask the user for the password.",
+    )
+    dp.add_argument(
         "-o",
         type=str,
         default="",
@@ -671,12 +696,19 @@ if __name__ == "__main__":
         log.setLevel(logging.DEBUG)
 
     if args.action == "download":
+        password: Optional[str] = None
+        if args.p:
+            password = (
+                os.getenv("WETRANSFER_PASSWORD", default=None)
+                or getpass.getpass()
+            )
+
         if args.g:
             for u in args.url:
-                print(download_url(u))
+                print(download_url(u, password))
         else:
             for u in args.url:
-                download(u, args.o)
+                download(u, password, args.o)
         exit(0)
 
     if args.action == "upload":
