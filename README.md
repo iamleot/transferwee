@@ -3,6 +3,8 @@
 transferwee is a simple Python 3 script to download/upload files via
 [wetransfer.com](https://wetransfer.com/).
 
+For Windows users, a standalone compiled exe version is available and downloadable at [https://github.com/outilslibre/transferwee-win](https://github.com/outilslibre/transferwee-win/releases)
+
 ## Usage
 
 ```
