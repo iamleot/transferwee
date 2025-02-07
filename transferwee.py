@@ -370,9 +370,6 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
 
     Return the parsed JSON response.
     """
-    j = {
-        "blocks": [_storm_prepare_item(f) for f in filenames],
-    }
     requests.options(
         _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
         headers={
@@ -381,16 +378,27 @@ def _storm_prepare(authorization: str, filenames: List[str]) -> Dict[Any, Any]:
             "User-Agent": WETRANSFER_USER_AGENT,
         },
     )
-    r = requests.post(
-        _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
-        json=j,
-        headers={
-            "Authorization": f"Bearer {authorization}",
-            "Origin": "https://wetransfer.com",
-            "User-Agent": WETRANSFER_USER_AGENT,
-        },
-    )
-    return r.json()
+
+    response = {"ok":True, "data":{"blocks":[]}}
+    chunk_size = 100
+    for i in range(0, len(filenames), chunk_size):
+        j = {
+            "blocks": [_storm_prepare_item(f) for f in filenames[i:i+chunk_size]],
+        }
+        r = requests.post(
+            _storm_urls(authorization)["WETRANSFER_STORM_BLOCK"],
+            json=j,
+            headers={
+                "Authorization": f"Bearer {authorization}",
+                "Origin": "https://wetransfer.com",
+                "User-Agent": WETRANSFER_USER_AGENT,
+            },
+        )
+
+        response["ok"] = response["ok"] and r.json()["ok"]
+        response["data"]["blocks"] += r.json()["data"]["blocks"]
+
+    return response
 
 
 def _storm_finalize_item(
