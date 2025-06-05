@@ -18,4 +18,4 @@ jobs:
         env:
           CONFTEST_POLICIES: git::https://github.com/iamleot/conftest-policies.git//policy/github
         with:
-          args: test --all-namespaces --update "${{ env.CONFTEST_POLICIES }}" .github
+          args: test --all-namespaces --policy '' --update "${{ env.CONFTEST_POLICIES }}" .github
