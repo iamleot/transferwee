@@ -1,4 +1,5 @@
 name: Check and test transferwee
+permissions: {}
 
 'on':
   push:
