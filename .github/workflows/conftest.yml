@@ -1,4 +1,5 @@
 name: Validate via personal conftest policies
+permissions: {}
 
 'on':
   push:

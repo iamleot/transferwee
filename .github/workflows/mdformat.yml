@@ -1,4 +1,5 @@
 name: Check Markdown formatting via mdformat
+permissions: {}
 
 'on':
   push:
