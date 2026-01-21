@@ -51,7 +51,6 @@ import urllib.parse
 
 import requests
 
-
 WETRANSFER_API_URL = "https://wetransfer.com/api/v4/transfers"
 WETRANSFER_DOWNLOAD_URL = WETRANSFER_API_URL + "/{transfer_id}/download"
 WETRANSFER_UPLOAD_EMAIL_URL = WETRANSFER_API_URL + "/email"
