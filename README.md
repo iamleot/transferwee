@@ -108,3 +108,29 @@ MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
 ## Dependencies
 
 transferwee needs [requests](http://python-requests.org/) package.
+
+## Docker usage
+
+### build
+
+to only build the app image use (skips tests)
+```
+docker build . -t transferwee --target app
+```
+
+to build with tests use 
+```
+docker build . -t transferwee
+```
+
+### run
+
+to run e.g. download link extraction use
+```
+docker run --rm  transferwee download  [url] -g
+```
+
+to download some file
+```
+mkdir  -p downloads &&  docker run --rm --user $(id -u):$(id -g) -v ./downloads:/downloads transferwee download  [url] -o /downloads/[filename]
+```
