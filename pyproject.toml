@@ -1,3 +1,6 @@
+[project]
+name = "transferwee3"
+
 [tool.black]
 # honor PEP 8
 line-length = 79
