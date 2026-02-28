@@ -5,8 +5,12 @@ transferwee is a simple Python 3 script to download/upload files via
 
 ## Usage
 
+This project utilises [Poetry](https://python-poetry.org/). Simply clone this repo and run
+`poetry install` in its root directory to install the dependencies in an automatically created
+virtual environment. You can then run transferwee with `poetry run python transferwee.py`.
+
 ```
-% transferwee -h
+% poetry run python transferwee.py -h
 usage: transferwee [-h] {download,upload} ...
 
 Download/upload files via wetransfer.com
@@ -33,7 +37,7 @@ is needed to separate it with the file arguments).
 Otherwise the link upload will be used.
 
 ```
-% transferwee upload -h
+% poetry run python transferwee.py upload -h
 usage: transferwee upload [-h] [-n display_name] [-m message] [-f from] [-t to [to ...]] [-v] file [file ...]
 
 positional arguments:
@@ -55,7 +59,7 @@ then upload it with the message passed via `-m` option:
 % echo 'Hello world!' > hello
 % md5 hello
 MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
-% transferwee upload -m 'Just a text file with the mandatory message...' hello
+% poetry run python transferwee.py upload -m 'Just a text file with the mandatory message...' hello
 https://we.tl/o8mGUXnxyZ
 ```
 
@@ -80,7 +84,7 @@ The URL supported are the ones in the form:
   upload
 
 ```
-% transferwee download -h
+% poetry run python transferwee.py download -h
 usage: transferwee download [-h] [-g] [-o file] [-v] url [url ...]
 
 positional arguments:
@@ -98,13 +102,9 @@ previous example for `upload` subcommand. Please note that if any file with the
 same name already exists it will be overwritten!:
 
 ```
-% transferwee download https://we.tl/o8mGUXnxyZ
+% poetry run python transferwee.py download https://we.tl/o8mGUXnxyZ
 % cat hello
 Hello world!
 % md5 hello
 MD5 (hello) = 59ca0efa9f5633cb0371bbc0355478d8
 ```
-
-## Dependencies
-
-transferwee needs [requests](http://python-requests.org/) package.
